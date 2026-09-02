@@ -5,7 +5,7 @@ import { BarChart3, Bell, CalendarDays, Check, ChevronDown, CircleDollarSign, Fi
 
 type Trade = { pair: string; direction: 'CALL' | 'PUT'; result: 'win' | 'loss'; profit: number; mood: string; time: string; followed: boolean }
 const pairs = ['EUR/USD','GBP/USD','USD/JPY','AUD/USD','USD/CAD','USD/CHF','EUR/GBP','EUR/JPY','GBP/JPY','NZD/USD','BTC/USD','Gold','US 500','US 30']
-const money = (v:number) => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v)
+const money = (v:number) => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'USD'}).format(v)
 
 import { createTrade } from '@/app/actions/trading'
 
