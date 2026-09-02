@@ -5,21 +5,16 @@ import { BarChart3, Bell, CalendarDays, Check, ChevronDown, CircleDollarSign, Fi
 
 type Trade = { pair: string; direction: 'CALL' | 'PUT'; result: 'win' | 'loss'; profit: number; mood: string; time: string; followed: boolean }
 const pairs = ['EUR/USD','GBP/USD','USD/JPY','AUD/USD','USD/CAD','USD/CHF','EUR/GBP','EUR/JPY','GBP/JPY','NZD/USD','BTC/USD','Gold','US 500','US 30']
-const seed: Trade[] = [
- {pair:'EUR/USD',direction:'CALL',result:'win',profit:85,mood:'Confiante',time:'09:42',followed:true},
- {pair:'GBP/JPY',direction:'PUT',result:'win',profit:68,mood:'Calma',time:'10:15',followed:true},
- {pair:'USD/JPY',direction:'CALL',result:'loss',profit:-50,mood:'Ansiosa',time:'11:03',followed:false},
- {pair:'BTC/USD',direction:'PUT',result:'win',profit:120,mood:'Confiante',time:'13:27',followed:true},
- {pair:'EUR/USD',direction:'PUT',result:'win',profit:85,mood:'Neutra',time:'14:10',followed:true},
-]
 const money = (v:number) => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(v)
 
-export function TradingDashboard(){
- const [trades,setTrades]=useState(seed); const [open,setOpen]=useState(false); const [active,setActive]=useState('Visão geral')
+import { createTrade } from '@/app/actions/trading'
+
+export function TradingDashboard({ user, initialData }: { user: { name: string; email: string }; initialData: { trades: any[]; settings: any } }){
+ const [trades,setTrades]=useState<Trade[]>(initialData.trades.map((t:any)=>({pair:t.pair,direction:t.direction,result:t.result,profit:t.profit,mood:t.mood,time:new Date(t.tradedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),followed:t.followedPlan}))); const [open,setOpen]=useState(false); const [active,setActive]=useState('Visão geral')
  const total=trades.reduce((a,t)=>a+t.profit,0), wins=trades.filter(t=>t.result==='win').length, losses=trades.length-wins
  const winRate=Math.round((wins/trades.length)*100)
  const [form,setForm]=useState({pair:'EUR/USD',direction:'CALL',amount:'50',payout:'85',result:'win',mood:'Confiante',followed:'true',notes:''})
- const addTrade=()=>{const amount=Number(form.amount), profit=form.result==='win'?amount*Number(form.payout)/100:-amount;setTrades([{pair:form.pair,direction:form.direction as 'CALL'|'PUT',result:form.result as 'win'|'loss',profit,mood:form.mood,time:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),followed:form.followed==='true'},...trades]);setOpen(false)}
+ const addTrade=async()=>{await createTrade({pair:form.pair,direction:form.direction,amount:Number(form.amount),payout:Number(form.payout),result:form.result,mood:form.mood,followedPlan:form.followed==='true',notes:form.notes});setOpen(false);window.location.reload()}
  const points=useMemo(()=>[42,48,45,58,55,68,65,78,74,88,84,96],[])
  return <div className="min-h-screen bg-background text-foreground flex">
   <aside className="hidden md:flex w-[76px] shrink-0 border-r border-border/60 bg-sidebar flex-col items-center py-5 gap-5">
