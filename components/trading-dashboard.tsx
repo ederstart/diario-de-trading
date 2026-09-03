@@ -14,7 +14,7 @@ const money = (v:number) => new Intl.NumberFormat('pt-BR',{style:'currency',curr
 const moods = ['Confiante','Calmo','Neutro','Ansioso']
 
 export default function TradingDashboard({user,initialData}:Props) {
- const router=useRouter(); const [view,setView]=useState('Visão geral'); const [trades,setTrades]=useState(initialData.trades||[]); const [pairs,setPairs]=useState([...defaults,...(initialData.pairs||[])]); const [modal,setModal]=useState<'trade'|'settings'|'pairs'|'profile'|null>(null); const [busy,setBusy]=useState(false); const [error,setError]=useState(''); const [mood,setMood]=useState('Calmo')
+  const router=useRouter(); const [view,setView]=useState('Visão geral'); const [sidebarOpen,setSidebarOpen]=useState(false); const [trades,setTrades]=useState(initialData.trades||[]); const [pairs,setPairs]=useState([...defaults,...(initialData.pairs||[])]); const [modal,setModal]=useState<'trade'|'settings'|'pairs'|'profile'|null>(null); const [busy,setBusy]=useState(false); const [error,setError]=useState(''); const [mood,setMood]=useState('Calmo')
  const s=initialData.settings||{}; const [settings,setSettings]=useState({initialBalance:String(s.initialBalance??0),taxRate:String(s.taxRate??15),dailyGoal:String(s.dailyGoal??0)}); const [name,setName]=useState(user.name); const [pairInput,setPairInput]=useState('')
  const [form,setForm]=useState<TradeForm>({pair:pairs[0],direction:'CALL',amount:'50',payout:'85',result:'win',mood:'Confiante',followedPlan:true,notes:'',tradedAt:new Date().toISOString().slice(0,16)})
  const [editingTrade,setEditingTrade]=useState<Trade | null>(null)
