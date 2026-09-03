@@ -14,7 +14,13 @@ export async function GET(request: NextRequest) {
   const blob = await get(pathname, { access: 'private' })
   if (!blob) return NextResponse.json({ error: 'Anexo não encontrado' }, { status: 404 })
 
+  const contentType = blob.headers.get('content-type') || 'application/octet-stream'
+  const filename = pathname.split('/').pop() || 'anexo'
   return new Response(blob.stream, {
-    headers: { 'Content-Type': blob.contentType || 'application/octet-stream', 'Cache-Control': 'private, no-store' },
+    headers: {
+      'Content-Type': contentType,
+      'Content-Disposition': `inline; filename="${filename}"`,
+      'Cache-Control': 'private, no-store',
+    },
   })
 }

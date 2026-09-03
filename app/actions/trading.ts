@@ -3,7 +3,7 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { trades, tradingSettings, tradingPairs, user } from '@/lib/db/schema'
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 
@@ -36,14 +36,14 @@ export async function updateTrade(input: { id: number; pair: string; direction: 
   const userId = await getUserId()
   if (!input.id || !input.pair || !['CALL', 'PUT'].includes(input.direction) || !['win', 'loss', 'break_even'].includes(input.result) || !Number.isFinite(input.amount) || input.amount <= 0 || !Number.isFinite(input.payout) || input.payout < 0 || input.payout > 100) throw new Error('Dados da operação inválidos')
   const profit = input.result === 'win' ? input.amount * input.payout / 100 : input.result === 'loss' ? -input.amount : 0
-  await db.update(trades).set({ pair: input.pair, direction: input.direction, amount: input.amount.toFixed(2), payout: input.payout.toFixed(2), result: input.result, profit: profit.toFixed(2), mood: input.mood, followedPlan: input.followedPlan, strategy: input.strategy || null, notes: input.notes || null, screenshotPath: input.screenshotPath || null, tradedAt: input.tradedAt ? new Date(input.tradedAt) : undefined }).where(eq(trades.id, input.id)).where(eq(trades.userId, userId))
+  await db.update(trades).set({ pair: input.pair, direction: input.direction, amount: input.amount.toFixed(2), payout: input.payout.toFixed(2), result: input.result, profit: profit.toFixed(2), mood: input.mood, followedPlan: input.followedPlan, strategy: input.strategy || null, notes: input.notes || null, screenshotPath: input.screenshotPath || null, tradedAt: input.tradedAt ? new Date(input.tradedAt) : undefined }).where(and(eq(trades.id, input.id), eq(trades.userId, userId)))
   revalidatePath('/')
 }
 
 export async function deleteTrade(id: number) {
   const userId = await getUserId()
   if (!id) throw new Error('Operação inválida')
-  await db.delete(trades).where(eq(trades.id, id)).where(eq(trades.userId, userId))
+  await db.delete(trades).where(and(eq(trades.id, id), eq(trades.userId, userId)))
   revalidatePath('/')
 }
 
@@ -58,6 +58,13 @@ export async function addTradingPair(symbol: string) {
   const id = await getUserId(); const value = symbol.trim().toUpperCase()
   if (!/^[A-Z0-9]{2,12}\/[A-Z0-9]{2,12}$/.test(value)) throw new Error('Use o formato EUR/USD')
   await db.insert(tradingPairs).values({ userId: id, symbol: value }).onConflictDoNothing(); revalidatePath('/')
+}
+
+export async function removeTradingPair(symbol: string) {
+  const id = await getUserId(); const value = symbol.trim().toUpperCase()
+  if (!value) throw new Error('Par inválido')
+  await db.delete(tradingPairs).where(and(eq(tradingPairs.userId, id), eq(tradingPairs.symbol, value)))
+  revalidatePath('/')
 }
 
 export async function updateProfile(name: string) {

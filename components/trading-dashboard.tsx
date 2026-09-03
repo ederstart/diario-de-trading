@@ -1,36 +1,1542 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { addTradingPair, createTrade, deleteTrade, saveSettings, updateProfile, updateTrade } from '@/app/actions/trading'
+import {
+  addTradingPair,
+  createTrade,
+  deleteTrade,
+  removeTradingPair,
+  saveSettings,
+  updateProfile,
+  updateTrade,
+} from '@/app/actions/trading'
 import { signOut } from '@/lib/auth-client'
-import { BarChart3, CalendarDays, Check, FileText, LayoutDashboard, LogOut, Menu, Moon, PanelLeftClose, PanelLeftOpen, Plus, Settings, Target, TrendingDown, TrendingUp, Wallet, X } from 'lucide-react'
+import {
+  BarChart3,
+  CalendarDays,
+  Check,
+  Edit3,
+  FileText,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Moon,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Pencil,
+  Plus,
+  Save,
+  Settings,
+  Sparkles,
+  Target,
+  Trash2,
+  TrendingUp,
+  Wallet,
+  X,
+} from 'lucide-react'
 
-type Trade = { id:number; pair:string; direction:string; amount:number; payout:number; result:string; profit:number; mood:string; tradedAt:string; followedPlan:boolean; strategy?:string; notes?:string; screenshotPath?:string }
-type TradeForm = { id?:number; pair:string; direction:string; amount:string; payout:string; result:string; mood:string; followedPlan:boolean; strategy?:string; notes:string; screenshotPath?:string; tradedAt:string }
-type Props = { user:{name:string;email:string}; initialData:{trades:Trade[]; settings:any; pairs?:string[]} }
-const defaults = ['EUR/USD','GBP/USD','USD/JPY','AUD/USD','USD/CAD','USD/CHF','EUR/GBP','EUR/JPY','GBP/JPY','NZD/USD','BTC/USD']
-const money = (v:number) => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'USD'}).format(v)
-const moods = ['Confiante','Calmo','Neutro','Ansioso']
-
-export default function TradingDashboard({user,initialData}:Props) {
-  const router=useRouter(); const [view,setView]=useState('Visão geral'); const [sidebarOpen,setSidebarOpen]=useState(false); const [trades,setTrades]=useState(initialData.trades||[]); const [pairs,setPairs]=useState([...defaults,...(initialData.pairs||[])]); const [modal,setModal]=useState<'trade'|'settings'|'pairs'|'profile'|null>(null); const [busy,setBusy]=useState(false); const [error,setError]=useState(''); const [mood,setMood]=useState('Calmo')
- const s=initialData.settings||{}; const [settings,setSettings]=useState({initialBalance:String(s.initialBalance??0),taxRate:String(s.taxRate??15),dailyGoal:String(s.dailyGoal??0)}); const [name,setName]=useState(user.name); const [pairInput,setPairInput]=useState('')
- const [form,setForm]=useState<TradeForm>({pair:pairs[0],direction:'CALL',amount:'50',payout:'85',result:'win',mood:'Confiante',followedPlan:true,notes:'',tradedAt:new Date().toISOString().slice(0,16)})
- const [editingTrade,setEditingTrade]=useState<Trade | null>(null)
- const total=trades.reduce((a,t)=>a+Number(t.profit),0), wins=trades.filter(t=>t.result==='win').length, losses=trades.filter(t=>t.result==='loss').length, rate=trades.length?Math.round(wins/trades.length*100):0, adherence=trades.length?Math.round(trades.filter(t=>t.followedPlan).length/trades.length*100):0, balance=Number(settings.initialBalance)+total
- const byDay=useMemo(()=>trades.reduce<Record<string,number>>((a,t)=>(a[t.tradedAt.slice(0,10)]=(a[t.tradedAt.slice(0,10)]||0)+Number(t.profit),a),{}),[trades])
- async function submitTrade(){setBusy(true);setError('');try{let screenshotPath=form.screenshotPath??null;const file=(document.querySelector('#trade-image') as HTMLInputElement)?.files?.[0];if(file){const fd=new FormData();fd.append('file',file);const r=await fetch('/api/upload',{method:'POST',body:fd});if(!r.ok)throw Error('Falha no upload');screenshotPath=(await r.json()).pathname}const input={...form,amount:Number(form.amount),payout:Number(form.payout),screenshotPath,tradedAt:form.tradedAt};if(form.id)await updateTrade(input);else await createTrade(input);setModal(null);setEditingTrade(null);router.refresh()}catch(e){setError(e instanceof Error?e.message:'Não foi possível salvar')}finally{setBusy(false)}}
- async function saveAll(fn:()=>Promise<void>){setBusy(true);setError('');try{await fn();setModal(null);router.refresh()}catch(e){setError(e instanceof Error?e.message:'Não foi possível salvar')}finally{setBusy(false)}}
- async function logout(){await signOut();router.replace('/sign-in');router.refresh()}
- const nav=[[LayoutDashboard,'Visão geral'],[BarChart3,'Análises'],[CalendarDays,'Calendário'],[Wallet,'Saldo'],[Target,'Metas'],[FileText,'Operações'],[Settings,'Configurações']] as const
-  return <div className="min-h-screen bg-background text-foreground flex"><aside className={`${sidebarOpen?'w-64':'w-[76px]'} ${sidebarOpen?'flex':'hidden'} md:flex shrink-0 border-r border-border flex-col items-center py-5 gap-5 bg-sidebar transition-[width] duration-200`}><div className="flex items-center gap-3"><div className="size-10 shrink-0 rounded-xl bg-primary grid place-items-center text-primary-foreground"><TrendingUp className="size-5"/></div><button onClick={()=>setSidebarOpen(!sidebarOpen)} title={sidebarOpen?'Recolher menu':'Expandir menu'} className="size-9 rounded-lg text-muted-foreground hover:bg-muted md:block hidden">{sidebarOpen?<PanelLeftClose className="size-4"/>:<PanelLeftOpen className="size-4"/>}</button></div><div className="h-px w-9 bg-border"/><nav className="flex flex-col gap-3 w-full px-3">{nav.map(([Icon,label])=><button key={label} title={label} onClick={()=>setView(label)} className={`${sidebarOpen?'w-full justify-start px-3':'size-10 justify-center'} h-10 rounded-xl flex items-center gap-3 ${view===label?'bg-primary/15 text-primary':'text-muted-foreground hover:bg-muted'}`}><Icon className="size-[18px] shrink-0"/>{sidebarOpen&&<span className="text-xs">{label}</span>}</button>)}</nav><div className="mt-auto flex flex-col gap-5 items-center"><button title="Modo escuro" className="text-muted-foreground"><Moon className="size-[18px]"/></button><button title="Sair" onClick={logout} className="text-muted-foreground hover:text-destructive"><LogOut className="size-[18px]"/></button><button onClick={()=>setModal('profile')} className="size-8 rounded-full bg-primary/20 text-primary text-xs font-semibold">{name.slice(0,2).toUpperCase()}</button></div></aside><main className="flex-1 min-w-0"><header className="min-h-[74px] border-b border-border flex items-center justify-between gap-3 px-4 sm:px-5 md:px-8"><div className="flex items-center gap-3 min-w-0"><button onClick={()=>setSidebarOpen(!sidebarOpen)} aria-label="Abrir menu" className="md:hidden size-10 shrink-0 rounded-lg border border-border grid place-items-center"><Menu className="size-5"/></button><div className="min-w-0"><p className="text-xs text-muted-foreground">{new Intl.DateTimeFormat('pt-BR',{dateStyle:'full'}).format(new Date())}</p><h1 className="text-xl font-semibold">Olá, {name} <span className="text-muted-foreground font-normal">— vamos revisar seu dia?</span></h1></div><div className="flex gap-2"><button onClick={()=>setModal('settings')} className="rounded-lg border border-border px-3 py-2 text-xs">Personalizar</button><button onClick={()=>setModal('trade')} className="rounded-lg bg-primary text-primary-foreground px-3 py-2 text-xs font-semibold"><Plus className="inline size-4 mr-1"/>Nova operação</button></div></header><div className="p-5 md:p-8 max-w-[1500px] mx-auto"><div className="flex justify-between mb-6"><div><h2 className="text-2xl font-semibold">{view}</h2><p className="text-sm text-muted-foreground mt-1">Dados reais da sua conta.</p></div><span className="text-xs text-muted-foreground">{trades.length} operações</span></div>{view==='Calendário'?<Calendar byDay={byDay}/>:view==='Operações'?<Trades trades={trades} onEdit={t=>{setEditingTrade(t);setForm({id:t.id,pair:t.pair,direction:t.direction,amount:String(t.amount),payout:String(t.payout),result:t.result,mood:t.mood,followedPlan:t.followedPlan,strategy:t.strategy,notes:t.notes||'',screenshotPath:t.screenshotPath,tradedAt:t.tradedAt.slice(0,16)});setModal('trade')}} onDelete={async t=>{if(!window.confirm('Excluir esta operação?'))return;await saveAll(()=>deleteTrade(t.id))}}/>:view==='Análises'?<Analysis trades={trades} rate={rate}/>:view==='Saldo'?<Balance balance={balance} total={total} onClick={()=>setModal('settings')}/>:view==='Metas'?<Balance balance={Number(settings.dailyGoal)} total={total} onClick={()=>setModal('settings')}/>:view==='Configurações'?<SettingsView onPairs={()=>setModal('pairs')} onProfile={()=>setModal('profile')} onBalance={()=>setModal('settings')}/>:<Overview balance={balance} total={total} rate={rate} adherence={adherence} wins={wins} losses={losses} mood={mood} setMood={setMood} trades={trades} byDay={byDay}/>}</div></main>{modal&&<Modal type={modal} busy={busy} error={error} close={()=>{setModal(null);setError('')}} form={form} setForm={setForm} pairs={pairs} settings={settings} setSettings={setSettings} name={name} setName={setName} pairInput={pairInput} setPairInput={setPairInput} submitTrade={submitTrade} saveAll={saveAll} setPairs={setPairs}/>}</div>
+type Trade = {
+  id: number
+  pair: string
+  direction: string
+  amount: number
+  payout: number
+  result: string
+  profit: number
+  mood: string
+  tradedAt: string
+  followedPlan: boolean
+  strategy?: string | null
+  notes?: string | null
+  screenshotPath?: string | null
 }
-function Cards({items}:{items:[string,string,string][]}){return <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">{items.map(([a,b,c])=><div className="rounded-xl border border-border bg-card p-4" key={a}><span className="text-xs text-muted-foreground">{a}</span><p className="text-2xl font-semibold mt-3">{b}</p><p className="text-xs text-primary mt-1">{c}</p></div>)}</section>}
-function Overview(p:any){return <><Cards items={[["Saldo atual",money(p.balance),money(p.total)],['Resultado líquido',money(p.total),`${p.wins} vitórias · ${p.losses} derrotas`],['Taxa de acerto',`${p.rate}%`,`${p.wins}W / ${p.losses}L`],['Aderência ao plano',`${p.adherence}%`,'Baseada nos seus trades']]}/><div className="grid lg:grid-cols-2 gap-4 mt-4"><Calendar byDay={p.byDay}/><div className="rounded-xl border border-border bg-card p-5"><h3 className="font-medium">Seu estado hoje</h3><div className="grid grid-cols-2 gap-2 mt-5">{moods.map(m=><button key={m} onClick={()=>p.setMood(m)} className={`min-h-12 rounded-lg border text-xs ${p.mood===m?'border-primary bg-primary/10 text-primary':'border-border text-muted-foreground'}`}>{m}</button>)}</div></div></div></>}
-function Calendar({byDay}:{byDay:Record<string,number>}){const days=Array.from({length:35},(_,i)=>{const d=new Date();d.setDate(d.getDate()-34+i);return d});return <div className="rounded-xl border border-border bg-card p-5"><h3 className="font-medium">Calendário de resultados</h3><p className="text-xs text-muted-foreground mt-1 mb-4">Inclui dias anteriores e fins de semana</p><div className="grid grid-cols-7 gap-2">{days.map(d=>{const key=d.toISOString().slice(0,10),v=byDay[key]||0;return <div key={key} className={`min-h-14 rounded-lg border p-2 text-[10px] ${v>0?'border-emerald-500/30 bg-emerald-500/10 text-emerald-400':v<0?'border-red-500/30 bg-red-500/10 text-red-400':'border-border text-muted-foreground'}`}><span>{d.getDate()}/{d.getMonth()+1}</span>{v!==0&&<strong className="block mt-2">{v>0?'+':''}{money(v)}</strong>}</div>})}</div></div>}
-function Trades({trades,onEdit,onDelete}:{trades:Trade[];onEdit:(trade:Trade)=>void;onDelete:(trade:Trade)=>void}){return <div className="rounded-xl border border-border bg-card divide-y divide-border">{trades.length?trades.map(t=><div key={t.id} className="p-4 flex justify-between gap-4"><div className="flex items-center gap-3"><div>{t.screenshotPath&&<a href={`/api/trades/attachment?path=${encodeURIComponent(t.screenshotPath)}`} target="_blank" rel="noreferrer"><img src={`/api/trades/attachment?path=${encodeURIComponent(t.screenshotPath)}`} alt={`Anexo da operação ${t.pair}`} className="size-12 rounded-lg object-cover border border-border"/></a>}</div><div><b>{t.pair}</b><p className="text-xs text-muted-foreground">{new Date(t.tradedAt).toLocaleString('pt-BR')} · {t.mood}</p></div></div><div className="flex items-center gap-3"><strong className={t.profit>=0?'text-emerald-400':'text-red-400'}>{money(Number(t.profit))}</strong><button onClick={()=>onEdit(t)} className="text-xs text-primary">Editar</button><button onClick={()=>onDelete(t)} className="text-xs text-destructive">Excluir</button></div></div>):<p className="p-8 text-center text-muted-foreground">Nenhuma operação.</p>}</div>}
-function Analysis({trades,rate}:{trades:Trade[];rate:number}){return <><Cards items={[["Trades",String(trades.length),'Total'],['Acerto',`${rate}%`,'Performance'],['Melhor resultado',money(Math.max(0,...trades.map(t=>Number(t.profit)))),'Recorde'],['Pior resultado',money(Math.min(0,...trades.map(t=>Number(t.profit)))),'Risco']]}/><div className="mt-4 rounded-xl border border-border bg-card p-5"><h3 className="font-medium">Distribuição de resultados</h3><div className="flex gap-2 mt-5 h-8"><div className="bg-emerald-500 rounded" style={{width:`${rate}%`}}/><div className="bg-red-500 rounded flex-1"/></div></div></>}
-function Balance({balance,total,onClick}:{balance:number;total:number;onClick:()=>void}){return <div className="rounded-xl border border-border bg-card p-6 max-w-xl"><p className="text-sm text-muted-foreground">Saldo configurado</p><p className="text-4xl font-semibold mt-2">{money(balance)}</p><p className="text-sm text-primary mt-2">Resultado acumulado: {money(total)}</p><button onClick={onClick} className="mt-6 rounded-lg bg-primary text-primary-foreground px-4 py-3 text-sm">Configurar saldo e metas</button></div>}
-function SettingsView({onPairs,onProfile,onBalance}:{onPairs:()=>void;onProfile:()=>void;onBalance:()=>void}){return <div className="grid md:grid-cols-3 gap-4">{[['Saldo e metas',onBalance],['Pares de moedas',onPairs],['Perfil',onProfile]].map(([x,f]:any)=><button key={x} onClick={f} className="rounded-xl border border-border bg-card p-6 text-left hover:border-primary"><Settings className="size-5 text-primary mb-4"/><b>{x}</b><p className="text-xs text-muted-foreground mt-2">Gerenciar configurações</p></button>)}</div>}
-function Modal(p:any){const input='h-11 rounded-lg border border-input bg-background px-3 text-sm text-foreground';return <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm grid place-items-center p-4"><div className="w-full max-w-lg rounded-2xl border border-border bg-card p-5"><div className="flex justify-between"><h2 className="font-semibold">{p.type==='trade'?'Registrar operação':p.type==='pairs'?'Pares de moedas':p.type==='profile'?'Perfil':'Configurações'}</h2><button onClick={p.close}><X/></button></div>{p.error&&<p className="text-sm text-destructive mt-3">{p.error}</p>}<div className="grid gap-4 mt-5">{p.type==='trade'&&<><label className="text-xs">Par<select className={input+' w-full mt-2'} value={p.form.pair} onChange={e=>p.setForm({...p.form,pair:e.target.value})}>{p.pairs.map((x:string)=><option key={x}>{x}</option>)}</select></label><div className="grid grid-cols-2 gap-3"><label className="text-xs">Direção<select className={input+' w-full mt-2'} value={p.form.direction} onChange={e=>p.setForm({...p.form,direction:e.target.value})}><option>CALL</option><option>PUT</option></select></label><label className="text-xs">Valor da entrada<input type="number" min="0.01" step="0.01" className={input+' w-full mt-2'} value={p.form.amount} onChange={e=>p.setForm({...p.form,amount:e.target.value})}/></label></div><div className="grid grid-cols-2 gap-3"><label className="text-xs">Payout (%)<input type="number" min="0" max="100" step="0.01" className={input+' w-full mt-2'} value={p.form.payout} onChange={e=>p.setForm({...p.form,payout:e.target.value})}/></label><label className="text-xs">Resultado<select className={input+' w-full mt-2'} value={p.form.result} onChange={e=>p.setForm({...p.form,result:e.target.value})}><option value="win">Vitória</option><option value="loss">Derrota</option><option value="break_even">Empate</option></select></label></div><p className="text-xs text-muted-foreground">Resultado estimado: <strong className={p.form.result==='loss'?'text-red-400':'text-emerald-400'}>{money(p.form.result==='win'?Number(p.form.amount)*Number(p.form.payout)/100:p.form.result==='loss'?-Number(p.form.amount):0)}</strong></p><label className="text-xs">Data e hora<input type="datetime-local" className={input+' w-full mt-2'} value={p.form.tradedAt} onChange={e=>p.setForm({...p.form,tradedAt:e.target.value})}/></label><label className="text-xs">Anotações<textarea className={input+' w-full mt-2 h-24 py-3'} value={p.form.notes} onChange={e=>p.setForm({...p.form,notes:e.target.value})}/></label><label className="text-xs">Imagem<input id="trade-image" type="file" accept="image/*" className="mt-2 text-sm"/></label><button disabled={p.busy} onClick={p.submitTrade} className="h-11 rounded-lg bg-primary text-primary-foreground">{p.busy?'Salvando...':'Salvar operação'}</button></>}{p.type==='settings'&&<><label className="text-xs">Saldo inicial<input className={input+' w-full mt-2'} type="number" value={p.settings.initialBalance} onChange={e=>p.setSettings({...p.settings,initialBalance:e.target.value})}/></label><label className="text-xs">Taxa de imposto (%)<input className={input+' w-full mt-2'} type="number" value={p.settings.taxRate} onChange={e=>p.setSettings({...p.settings,taxRate:e.target.value})}/></label><label className="text-xs">Meta diária<input className={input+' w-full mt-2'} type="number" value={p.settings.dailyGoal} onChange={e=>p.setSettings({...p.settings,dailyGoal:e.target.value})}/></label><button onClick={()=>p.saveAll(()=>saveSettings({initialBalance:Number(p.settings.initialBalance),taxRate:Number(p.settings.taxRate),dailyGoal:Number(p.settings.dailyGoal)}))} className="h-11 rounded-lg bg-primary text-primary-foreground">Salvar configurações</button></>}{p.type==='profile'&&<><label className="text-xs">Nome de exibição<input className={input+' w-full mt-2'} value={p.name} onChange={e=>p.setName(e.target.value)}/></label><button onClick={()=>p.saveAll(()=>updateProfile(p.name))} className="h-11 rounded-lg bg-primary text-primary-foreground">Salvar nome</button></>}{p.type==='pairs'&&<><div className="flex gap-2"><input className={input+' flex-1'} placeholder="Ex.: ETH/USD" value={p.pairInput} onChange={e=>p.setPairInput(e.target.value)}/><button onClick={()=>p.saveAll(async()=>{await addTradingPair(p.pairInput);p.setPairs([...p.pairs,p.pairInput.toUpperCase()]);p.setPairInput('')})} className="px-4 rounded-lg bg-primary text-primary-foreground"><Plus/></button></div><div className="flex flex-wrap gap-2">{p.pairs.map((x:string)=><span className="rounded-full border border-border px-3 py-1 text-xs" key={x}>{x}</span>)}</div></>}</div></div></div>}
+
+type TradeForm = {
+  id?: number
+  pair: string
+  direction: string
+  amount: string
+  payout: string
+  result: string
+  mood: string
+  followedPlan: boolean
+  notes: string
+  screenshotPath: string | null
+  tradedAt: string
+}
+
+type Props = {
+  user: { name: string; email: string }
+  initialData: { trades: Trade[]; settings: any; pairs?: string[] }
+}
+
+const DEFAULTS = ['EUR/USD', 'GBP/USD', 'USD/JPY', 'AUD/USD', 'USD/CAD', 'USD/CHF', 'EUR/GBP', 'EUR/JPY', 'GBP/JPY', 'NZD/USD', 'BTC/USD']
+const MOODS = [
+  { key: 'Confiante', value: 100, color: 'emerald', label: 'Confiante' },
+  { key: 'Calmo', value: 80, color: 'sky', label: 'Calmo' },
+  { key: 'Neutro', value: 50, color: 'amber', label: 'Neutro' },
+  { key: 'Ansioso', value: 20, color: 'red', label: 'Ansioso' },
+]
+const MOTIVATIONAL = [
+  'Você está no controle. Respeite o seu plano.',
+  'Confie no processo. Resultado vem com consistência.',
+  'Não arrisque tudo. Faça uma operação por vez.',
+  'Você consegue. Mantenha a disciplina.',
+  'Disciplina é o caminho. Continue firme.',
+  'É possível! Respeite o gerenciamento de risco.',
+  'Pequenos ganhos diários viram grandes resultados.',
+  'Siga o plano. A vitória é uma consequência.',
+]
+
+const money = (v: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'USD' }).format(v)
+
+const toDateInput = (iso: string) => iso.slice(0, 16)
+
+const isWeekend = (iso: string) => {
+  const d = new Date(iso)
+  const day = d.getDay()
+  return day === 0 || day === 6
+}
+
+const sameDay = (a: string, b: string) => a.slice(0, 10) === b.slice(0, 10)
+
+const pairLabel = (value: string) => value.replace('/', ' / ')
+
+export default function TradingDashboard({ user, initialData }: Props) {
+  const router = useRouter()
+  const [view, setView] = useState('Visão geral')
+  const [sidebarOpen, setSidebarOpen] = useState(true) // desktop expanded/collapsed
+  const [mobileOpen, setMobileOpen] = useState(false) // mobile drawer
+  const [trades, setTrades] = useState<Trade[]>(initialData.trades || [])
+  const [pairs, setPairs] = useState<string[]>(() => {
+    const userPairs = initialData.pairs || []
+    return Array.from(new Set([...DEFAULTS, ...userPairs]))
+  })
+  const [modal, setModal] = useState<'trade' | 'settings' | 'pairs' | 'profile' | 'block' | 'image' | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [mood, setMood] = useState('Calmo')
+  const [quoteIndex, setQuoteIndex] = useState(0)
+
+  const s = initialData.settings || {}
+  const [settings, setSettings] = useState({
+    initialBalance: String(s.initialBalance ?? 0),
+    taxRate: String(s.taxRate ?? 15),
+    dailyGoal: String(s.dailyGoal ?? 0),
+  })
+  const [name, setName] = useState(user.name)
+  const [pairInput, setPairInput] = useState('')
+  const [editingPair, setEditingPair] = useState<string | null>(null)
+  const [editingPairValue, setEditingPairValue] = useState('')
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
+
+  const [form, setForm] = useState<TradeForm>({
+    pair: pairs[0],
+    direction: 'CALL',
+    amount: '50',
+    payout: '85',
+    result: 'win',
+    mood: 'Confiante',
+    followedPlan: true,
+    notes: '',
+    screenshotPath: null,
+    tradedAt: new Date().toISOString().slice(0, 16),
+  })
+  const [editingTrade, setEditingTrade] = useState<Trade | null>(null)
+
+  // Block reasons
+  const blocked = useMemo(() => {
+    if (!form.tradedAt) return null
+    if (isWeekend(form.tradedAt)) {
+      return 'Finais de semana estão bloqueados. Foque em estudo e descanso.'
+    }
+    const todayKey = form.tradedAt.slice(0, 10)
+    const todayTrades = trades.filter((t) => sameDay(t.tradedAt, todayKey))
+    if (todayTrades.length > 0 && todayTrades[0].result === 'loss') {
+      return 'Hoje sua primeira operação foi LOSS. O dia está bloqueado para preservar sua banca.'
+    }
+    return null
+  }, [form.tradedAt, trades])
+
+  // Stats
+  const total = trades.reduce((a, t) => a + Number(t.profit), 0)
+  const wins = trades.filter((t) => t.result === 'win').length
+  const losses = trades.filter((t) => t.result === 'loss').length
+  const rate = trades.length ? Math.round((wins / trades.length) * 100) : 0
+  const adherence = trades.length
+    ? Math.round((trades.filter((t) => t.followedPlan).length / trades.length) * 100)
+    : 0
+  const balance = Number(settings.initialBalance) + total
+
+  const byDay = useMemo(
+    () =>
+      trades.reduce<Record<string, number>>(
+        (acc, t) => {
+          const key = t.tradedAt.slice(0, 10)
+          acc[key] = (acc[key] || 0) + Number(t.profit)
+          return acc
+        },
+        {}
+      ),
+    [trades]
+  )
+
+  // Performance evaluation series
+  const last12 = useMemo(() => {
+    const days: { key: string; label: string; profit: number; cum: number }[] = []
+    let cum = 0
+    const sorted = [...trades].sort((a, b) => a.tradedAt.localeCompare(b.tradedAt))
+    const uniqueKeys = Array.from(new Set(sorted.map((t) => t.tradedAt.slice(0, 10))))
+    const lastKeys = uniqueKeys.slice(-12)
+    for (const key of lastKeys) {
+      const profit = sorted
+        .filter((t) => t.tradedAt.slice(0, 10) === key)
+        .reduce((a, t) => a + Number(t.profit), 0)
+      cum += profit
+      const d = new Date(key)
+      days.push({
+        key,
+        label: d.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }),
+        profit,
+        cum,
+      })
+    }
+    return days
+  }, [trades])
+
+  // Rotate motivational messages
+  useEffect(() => {
+    const t = setInterval(() => setQuoteIndex((i) => (i + 1) % MOTIVATIONAL.length), 8000)
+    return () => clearInterval(t)
+  }, [])
+
+  // Auto-clear success message
+  useEffect(() => {
+    if (!success) return
+    const t = setTimeout(() => setSuccess(''), 3000)
+    return () => clearTimeout(t)
+  }, [success])
+
+  // Close mobile drawer when resizing up
+  useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth >= 768) setMobileOpen(false)
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  async function submitTrade() {
+    if (blocked) {
+      setError(blocked)
+      return
+    }
+    setBusy(true)
+    setError('')
+    try {
+      let screenshotPath: string | null = form.screenshotPath ?? null
+      const fileInput = document.querySelector('#trade-image') as HTMLInputElement | null
+      const file = fileInput?.files?.[0]
+      if (file) {
+        const fd = new FormData()
+        fd.append('file', file)
+        const r = await fetch('/api/upload', { method: 'POST', body: fd })
+        if (!r.ok) throw new Error('Falha no upload')
+        const data = await r.json()
+        screenshotPath = data.pathname
+      }
+      const base = {
+        pair: form.pair,
+        direction: form.direction,
+        amount: Number(form.amount),
+        payout: Number(form.payout),
+        result: form.result,
+        mood: form.mood,
+        followedPlan: form.followedPlan,
+        notes: form.notes,
+        tradedAt: form.tradedAt,
+      }
+      const withScreenshot = screenshotPath ? { ...base, screenshotPath } : base
+      if (form.id) await updateTrade({ id: form.id, ...withScreenshot })
+      else await createTrade(withScreenshot)
+      setModal(null)
+      setEditingTrade(null)
+      setSuccess('Operação salva com sucesso')
+      router.refresh()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível salvar')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function saveAll(fn: () => Promise<void>) {
+    setBusy(true)
+    setError('')
+    try {
+      await fn()
+      setSuccess('Salvo com sucesso')
+      router.refresh()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível salvar')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function logout() {
+    await signOut()
+    router.replace('/sign-in')
+    router.refresh()
+  }
+
+  const nav = [
+    [LayoutDashboard, 'Visão geral'],
+    [BarChart3, 'Análises'],
+    [CalendarDays, 'Calendário'],
+    [Wallet, 'Saldo'],
+    [Target, 'Metas'],
+    [FileText, 'Operações'],
+    [Settings, 'Configurações'],
+  ] as const
+
+  return (
+    <div className="min-h-screen bg-background text-foreground flex">
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-40 md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed md:static z-50 inset-y-0 left-0 ${sidebarOpen ? 'md:w-64' : 'md:w-[76px]'} ${mobileOpen ? 'translate-x-0 w-64' : '-translate-x-full'} md:translate-x-0 shrink-0 border-r border-border flex flex-col py-5 gap-5 bg-sidebar transition-[transform,width] duration-200`}
+      >
+        <div className="flex items-center justify-between px-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="size-10 shrink-0 rounded-xl bg-primary grid place-items-center text-primary-foreground">
+              <TrendingUp className="size-5" />
+            </div>
+            {(sidebarOpen || mobileOpen) && (
+              <span className="text-sm font-semibold truncate">Diário de Trading</span>
+            )}
+          </div>
+          <button
+            onClick={() => {
+              setSidebarOpen(!sidebarOpen)
+              setMobileOpen(false)
+            }}
+            title={sidebarOpen ? 'Recolher menu' : 'Expandir menu'}
+            className="size-9 rounded-lg text-muted-foreground hover:bg-muted hidden md:grid place-items-center"
+          >
+            {sidebarOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
+          </button>
+          <button
+            onClick={() => setMobileOpen(false)}
+            title="Fechar menu"
+            className="size-9 rounded-lg text-muted-foreground hover:bg-muted md:hidden grid place-items-center"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+        <div className="h-px w-9 bg-border mx-auto" />
+        <nav className="flex flex-col gap-3 w-full px-3">
+          {nav.map(([Icon, label]) => (
+            <button
+              key={label}
+              title={label}
+              onClick={() => {
+                setView(label)
+                setMobileOpen(false)
+              }}
+              className={`${sidebarOpen || mobileOpen ? 'w-full justify-start px-3' : 'md:size-10 justify-center'} h-10 rounded-xl flex items-center gap-3 ${view === label ? 'bg-primary/15 text-primary' : 'text-muted-foreground hover:bg-muted'}`}
+            >
+              <Icon className="size-[18px] shrink-0" />
+              {(sidebarOpen || mobileOpen) && <span className="text-xs">{label}</span>}
+            </button>
+          ))}
+        </nav>
+        <div className="mt-auto flex flex-col gap-5 items-center px-3">
+          <button title="Modo escuro" className="text-muted-foreground hover:text-foreground">
+            <Moon className="size-[18px]" />
+          </button>
+          <button
+            title="Sair"
+            onClick={logout}
+            className="text-muted-foreground hover:text-destructive"
+          >
+            <LogOut className="size-[18px]" />
+          </button>
+          <button
+            onClick={() => setModal('profile')}
+            className="size-8 rounded-full bg-primary/20 text-primary text-xs font-semibold"
+          >
+            {name.slice(0, 2).toUpperCase()}
+          </button>
+        </div>
+      </aside>
+
+      {/* Main */}
+      <main className="flex-1 min-w-0 md:ml-0">
+        <header className="min-h-[74px] border-b border-border flex items-center justify-between gap-3 px-4 sm:px-5 md:px-8">
+          <div className="flex items-center gap-3 min-w-0">
+            <button
+              onClick={() => setMobileOpen(true)}
+              aria-label="Abrir menu"
+              className="md:hidden size-10 shrink-0 rounded-lg border border-border grid place-items-center"
+            >
+              <Menu className="size-5" />
+            </button>
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              aria-label="Alternar menu"
+              className="hidden md:grid size-9 shrink-0 rounded-lg text-muted-foreground hover:bg-muted place-items-center"
+              title={sidebarOpen ? 'Recolher menu' : 'Expandir menu'}
+            >
+              {sidebarOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
+            </button>
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">
+                {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(new Date())}
+              </p>
+              <h1 className="text-xl font-semibold truncate">
+                Olá, {name}{' '}
+                <span className="text-muted-foreground font-normal">
+                  — vamos revisar seu dia?
+                </span>
+              </h1>
+            </div>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            <button
+              onClick={() => setModal('settings')}
+              className="rounded-lg border border-border px-3 py-2 text-xs hidden sm:inline-flex"
+            >
+              Personalizar
+            </button>
+            <button
+              onClick={() => {
+                if (blocked) {
+                  setModal('block')
+                  return
+                }
+                setEditingTrade(null)
+                setForm({
+                  pair: pairs[0],
+                  direction: 'CALL',
+                  amount: '50',
+                  payout: '85',
+                  result: 'win',
+                  mood: mood || 'Confiante',
+                  followedPlan: true,
+                  notes: '',
+                  screenshotPath: null,
+                  tradedAt: new Date().toISOString().slice(0, 16),
+                })
+                setModal('trade')
+              }}
+              className="rounded-lg bg-primary text-primary-foreground px-3 py-2 text-xs font-semibold inline-flex items-center gap-1"
+            >
+              <Plus className="size-4" /> Nova operação
+            </button>
+          </div>
+        </header>
+
+        {success && (
+          <div className="mx-4 sm:mx-5 md:mx-8 mt-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 px-4 py-2 text-sm">
+            {success}
+          </div>
+        )}
+
+        <div className="p-4 sm:p-5 md:p-8 max-w-[1500px] mx-auto">
+          {/* Motivational banner */}
+          <div className="mb-5 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 flex items-start gap-3">
+            <Sparkles className="size-4 text-primary mt-0.5 shrink-0" />
+            <p className="text-sm text-foreground/80">{MOTIVATIONAL[quoteIndex]}</p>
+          </div>
+
+          <div className="flex justify-between mb-6 gap-3">
+            <div className="min-w-0">
+              <h2 className="text-2xl font-semibold truncate">{view}</h2>
+              <p className="text-sm text-muted-foreground mt-1">Dados reais da sua conta.</p>
+            </div>
+            <span className="text-xs text-muted-foreground shrink-0">{trades.length} operações</span>
+          </div>
+
+          {view === 'Visão geral' && (
+            <Overview
+              balance={balance}
+              total={total}
+              rate={rate}
+              adherence={adherence}
+              wins={wins}
+              losses={losses}
+              mood={mood}
+              setMood={setMood}
+              trades={trades}
+              byDay={byDay}
+              series={last12}
+              blocked={blocked}
+            />
+          )}
+          {view === 'Calendário' && <Calendar byDay={byDay} />}
+          {view === 'Operações' && (
+            <Trades
+              trades={trades}
+              onEdit={(t) => {
+                setEditingTrade(t)
+                setForm({
+                  id: t.id,
+                  pair: t.pair,
+                  direction: t.direction,
+                  amount: String(t.amount),
+                  payout: String(t.payout),
+                  result: t.result,
+                  mood: t.mood,
+                  followedPlan: t.followedPlan,
+                  notes: t.notes || '',
+                  screenshotPath: t.screenshotPath || null,
+                  tradedAt: toDateInput(t.tradedAt),
+                })
+                if (blocked) {
+                  setModal('block')
+                  return
+                }
+                setModal('trade')
+              }}
+              onDelete={async (t) => {
+                if (!window.confirm('Excluir esta operação?')) return
+                await saveAll(async () => {
+                  await deleteTrade(t.id)
+                })
+              }}
+              onPreview={(url) => {
+                setPreviewImage(url)
+                setModal('image')
+              }}
+            />
+          )}
+          {view === 'Análises' && <Analysis trades={trades} rate={rate} series={last12} />}
+          {view === 'Saldo' && <Balance balance={balance} total={total} onClick={() => setModal('settings')} />}
+          {view === 'Metas' && (
+            <Balance
+              balance={Number(settings.dailyGoal)}
+              total={total}
+              onClick={() => setModal('settings')}
+            />
+          )}
+          {view === 'Configurações' && (
+            <SettingsView
+              onPairs={() => setModal('pairs')}
+              onProfile={() => setModal('profile')}
+              onBalance={() => setModal('settings')}
+            />
+          )}
+        </div>
+      </main>
+
+      {modal === 'trade' && (
+        <TradeModal
+          form={form}
+          setForm={setForm}
+          pairs={pairs}
+          busy={busy}
+          error={error}
+          blocked={blocked}
+          close={() => {
+            setModal(null)
+            setError('')
+          }}
+          submit={submitTrade}
+          editing={editingTrade}
+        />
+      )}
+      {modal === 'settings' && (
+        <SettingsModal
+          settings={settings}
+          setSettings={setSettings}
+          busy={busy}
+          error={error}
+          close={() => {
+            setModal(null)
+            setError('')
+          }}
+          save={(s) =>
+            saveAll(async () => {
+              await saveSettings(s)
+            })
+          }
+        />
+      )}
+      {modal === 'profile' && (
+        <ProfileModal
+          name={name}
+          setName={setName}
+          busy={busy}
+          error={error}
+          close={() => {
+            setModal(null)
+            setError('')
+          }}
+          save={() =>
+            saveAll(async () => {
+              await updateProfile(name)
+            })
+          }
+        />
+      )}
+      {modal === 'pairs' && (
+        <PairsModal
+          pairs={pairs}
+          setPairs={setPairs}
+          pairInput={pairInput}
+          setPairInput={setPairInput}
+          editingPair={editingPair}
+          setEditingPair={setEditingPair}
+          editingPairValue={editingPairValue}
+          setEditingPairValue={setEditingPairValue}
+          busy={busy}
+          error={error}
+          close={() => {
+            setModal(null)
+            setError('')
+            setEditingPair(null)
+            setEditingPairValue('')
+          }}
+          add={() =>
+            saveAll(async () => {
+              const v = pairInput.trim().toUpperCase()
+              if (!v) throw new Error('Informe o par')
+              await addTradingPair(v)
+              setPairs((prev) => (prev.includes(v) ? prev : [...prev, v]))
+              setPairInput('')
+            })
+          }
+          saveEdit={(oldValue) =>
+            saveAll(async () => {
+              const v = editingPairValue.trim().toUpperCase()
+              if (!v) throw new Error('Informe o nome do par')
+              await addTradingPair(v) // ensure exists
+              if (oldValue !== v) await removeTradingPair(oldValue)
+              setPairs((prev) =>
+                Array.from(new Set([...prev.filter((x) => x !== oldValue), v]))
+              )
+              setEditingPair(null)
+              setEditingPairValue('')
+            })
+          }
+          remove={(symbol) =>
+            saveAll(async () => {
+              await removeTradingPair(symbol)
+              setPairs((prev) => prev.filter((x) => x !== symbol))
+            })
+          }
+        />
+      )}
+      {modal === 'block' && (
+        <BlockModal
+          reason={blocked || 'Operação bloqueada.'}
+          close={() => setModal(null)}
+        />
+      )}
+      {modal === 'image' && previewImage && (
+        <ImageModal src={previewImage} close={() => setModal(null)} />
+      )}
+    </div>
+  )
+}
+
+function Cards({ items }: { items: [string, string, string][] }) {
+  return (
+    <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {items.map(([a, b, c]) => (
+        <div className="rounded-xl border border-border bg-card p-4" key={a}>
+          <span className="text-xs text-muted-foreground">{a}</span>
+          <p className="text-2xl font-semibold mt-3">{b}</p>
+          <p className="text-xs text-primary mt-1">{c}</p>
+        </div>
+      ))}
+    </section>
+  )
+}
+
+function PerformanceChart({ series }: { series: { key: string; label: string; profit: number; cum: number }[] }) {
+  if (!series.length) {
+    return (
+      <div className="h-64 grid place-items-center text-sm text-muted-foreground">
+        Sem dados suficientes para gerar o gráfico.
+      </div>
+    )
+  }
+  const values = series.map((s) => s.cum)
+  const min = Math.min(...values, 0)
+  const max = Math.max(...values, 1)
+  const range = max - min || 1
+  const W = 600
+  const H = 220
+  const pad = 24
+  const stepX = series.length > 1 ? (W - pad * 2) / (series.length - 1) : 0
+  const points = series.map((s, i) => {
+    const x = pad + i * stepX
+    const y = H - pad - ((s.cum - min) / range) * (H - pad * 2)
+    return { x, y, ...s }
+  })
+  const path = points
+    .map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
+    .join(' ')
+  const area = `${path} L ${pad + (series.length - 1) * stepX} ${H - pad} L ${pad} ${H - pad} Z`
+
+  return (
+    <div>
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-56">
+        <defs>
+          <linearGradient id="g" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="currentColor" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={area} fill="url(#g)" className="text-primary" />
+        <path d={path} fill="none" strokeWidth="2" className="stroke-primary" />
+        {points.map((p) => (
+          <circle key={p.key} cx={p.x} cy={p.y} r="3" className="fill-primary" />
+        ))}
+      </svg>
+      <div className="flex justify-between text-[10px] text-muted-foreground mt-2 px-1">
+        {series.map((s) => (
+          <span key={s.key}>{s.label}</span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function MoodRing({
+  mood,
+  setMood,
+}: {
+  mood: string
+  setMood: (m: string) => void
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-3 mt-5">
+      {MOODS.map((m) => {
+        const active = mood === m.key
+        const ringColor =
+          m.color === 'emerald'
+            ? 'stroke-emerald-500'
+            : m.color === 'sky'
+            ? 'stroke-sky-500'
+            : m.color === 'amber'
+            ? 'stroke-amber-500'
+            : 'stroke-red-500'
+        const textColor =
+          m.color === 'emerald'
+            ? 'text-emerald-400'
+            : m.color === 'sky'
+            ? 'text-sky-400'
+            : m.color === 'amber'
+            ? 'text-amber-400'
+            : 'text-red-400'
+        // dashed progress ring: full circle = 100%
+        const radius = 28
+        const circumference = 2 * Math.PI * radius
+        const dashOffset = circumference * (1 - m.value / 100)
+        return (
+          <button
+            key={m.key}
+            onClick={() => setMood(m.key)}
+            className={`relative rounded-xl border p-4 flex flex-col items-center gap-2 transition ${
+              active ? 'border-primary bg-primary/10' : 'border-border hover:bg-muted/40'
+            }`}
+          >
+            <svg width="68" height="68" viewBox="0 0 68 68" className="-rotate-90">
+              <circle cx="34" cy="34" r={radius} fill="none" className="stroke-muted" strokeWidth="4" strokeDasharray="4 4" />
+              <circle
+                cx="34"
+                cy="34"
+                r={radius}
+                fill="none"
+                className={ringColor}
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeDasharray={`${circumference * (m.value / 100)} ${circumference}`}
+                strokeDashoffset={dashOffset}
+              />
+            </svg>
+            <span className={`text-xs font-medium ${active ? textColor : 'text-muted-foreground'}`}>
+              {m.label}
+            </span>
+            <span className={`text-[10px] ${active ? textColor : 'text-muted-foreground/70'}`}>{m.value}%</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function Overview(p: any) {
+  return (
+    <>
+      <Cards
+        items={[
+          ['Saldo atual', money(p.balance), money(p.total)],
+          ['Resultado líquido', money(p.total), `${p.wins} vitórias · ${p.losses} derrotas`],
+          ['Taxa de acerto', `${p.rate}%`, `${p.wins}W / ${p.losses}L`],
+          ['Aderência ao plano', `${p.adherence}%`, 'Baseada nos seus trades'],
+        ]}
+      />
+      <div className="grid lg:grid-cols-2 gap-4 mt-4">
+        <div className="rounded-xl border border-border bg-card p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-medium">Avaliação de desempenho</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Evolução do saldo acumulado nos últimos dias
+              </p>
+            </div>
+            <span className="text-primary text-sm font-semibold">
+              {money(p.series.length ? p.series[p.series.length - 1].cum : 0)}
+            </span>
+          </div>
+          <div className="mt-4">
+            <PerformanceChart series={p.series} />
+          </div>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-5">
+          <h3 className="font-medium">Seu estado hoje</h3>
+          <p className="text-xs text-muted-foreground mt-1">
+            Como você está se sentindo? Quanto maior a porcentagem, melhor o seu estado.
+          </p>
+          <MoodRing mood={p.mood} setMood={p.setMood} />
+        </div>
+      </div>
+    </>
+  )
+}
+
+function Calendar({ byDay }: { byDay: Record<string, number> }) {
+  const days = Array.from({ length: 35 }, (_, i) => {
+    const d = new Date()
+    d.setDate(d.getDate() - 34 + i)
+    return d
+  })
+  return (
+    <div className="rounded-xl border border-border bg-card p-5">
+      <h3 className="font-medium">Calendário de resultados</h3>
+      <p className="text-xs text-muted-foreground mt-1 mb-4">
+        Inclui dias anteriores e fins de semana
+      </p>
+      <div className="grid grid-cols-7 gap-2">
+        {days.map((d) => {
+          const key = d.toISOString().slice(0, 10)
+          const v = byDay[key] || 0
+          return (
+            <div
+              key={key}
+              className={`min-h-14 rounded-lg border p-2 text-[10px] ${
+                v > 0
+                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
+                  : v < 0
+                  ? 'border-red-500/30 bg-red-500/10 text-red-400'
+                  : 'border-border text-muted-foreground'
+              }`}
+            >
+              <span>
+                {d.getDate()}/{d.getMonth() + 1}
+              </span>
+              {v !== 0 && (
+                <strong className="block mt-2">
+                  {v > 0 ? '+' : ''}
+                  {money(v)}
+                </strong>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function Trades({
+  trades,
+  onEdit,
+  onDelete,
+  onPreview,
+}: {
+  trades: Trade[]
+  onEdit: (trade: Trade) => void
+  onDelete: (trade: Trade) => Promise<void>
+  onPreview: (url: string) => void
+}) {
+  if (!trades.length) {
+    return (
+      <div className="rounded-xl border border-border bg-card p-8 text-center text-muted-foreground">
+        Nenhuma operação.
+      </div>
+    )
+  }
+  return (
+    <div className="rounded-xl border border-border bg-card divide-y divide-border">
+      {trades.map((t) => {
+        const url = t.screenshotPath
+          ? `/api/trades/attachment?path=${encodeURIComponent(t.screenshotPath)}`
+          : ''
+        return (
+          <div key={t.id} className="p-4 flex justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              {t.screenshotPath ? (
+                <button
+                  type="button"
+                  onClick={() => onPreview(url)}
+                  className="shrink-0"
+                  title="Ver imagem"
+                >
+                  <img
+                    src={url}
+                    alt={`Anexo da operação ${t.pair}`}
+                    className="size-12 rounded-lg object-cover border border-border"
+                  />
+                </button>
+              ) : null}
+              <div className="min-w-0">
+                <b className="block truncate">{pairLabel(t.pair)}</b>
+                <p className="text-xs text-muted-foreground truncate">
+                  {new Date(t.tradedAt).toLocaleString('pt-BR')} · {t.mood}
+                </p>
+                {t.notes ? (
+                  <p className="text-xs text-foreground/70 mt-1 line-clamp-2">{t.notes}</p>
+                ) : null}
+              </div>
+            </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <strong className={t.profit >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                {money(Number(t.profit))}
+              </strong>
+              <button
+                onClick={() => onEdit(t)}
+                className="text-xs text-primary inline-flex items-center gap-1"
+              >
+                <Pencil className="size-3" /> Editar
+              </button>
+              <button
+                onClick={() => onDelete(t)}
+                className="text-xs text-destructive inline-flex items-center gap-1"
+              >
+                <Trash2 className="size-3" /> Excluir
+              </button>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+function Analysis({
+  trades,
+  rate,
+  series,
+}: {
+  trades: Trade[]
+  rate: number
+  series: { key: string; label: string; profit: number; cum: number }[]
+}) {
+  return (
+    <>
+      <Cards
+        items={[
+          ['Trades', String(trades.length), 'Total'],
+          ['Acerto', `${rate}%`, 'Performance'],
+          [
+            'Melhor resultado',
+            money(Math.max(0, ...trades.map((t) => Number(t.profit)))),
+            'Recorde',
+          ],
+          [
+            'Pior resultado',
+            money(Math.min(0, ...trades.map((t) => Number(t.profit)))),
+            'Risco',
+          ],
+        ]}
+      />
+      <div className="grid lg:grid-cols-2 gap-4 mt-4">
+        <div className="rounded-xl border border-border bg-card p-5">
+          <h3 className="font-medium">Distribuição de resultados</h3>
+          <div className="flex gap-2 mt-5 h-8">
+            <div className="bg-emerald-500 rounded" style={{ width: `${rate}%` }} />
+            <div className="bg-red-500 rounded flex-1" />
+          </div>
+          <div className="flex justify-between text-[10px] text-muted-foreground mt-2">
+            <span>Vitórias {rate}%</span>
+            <span>Derrotas {100 - rate}%</span>
+          </div>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-5">
+          <h3 className="font-medium">Avaliação de desempenho</h3>
+          <p className="text-xs text-muted-foreground mt-1 mb-3">Evolução do saldo</p>
+          <PerformanceChart series={series} />
+        </div>
+      </div>
+    </>
+  )
+}
+
+function Balance({
+  balance,
+  total,
+  onClick,
+}: {
+  balance: number
+  total: number
+  onClick: () => void
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-6 max-w-xl">
+      <p className="text-sm text-muted-foreground">Saldo configurado</p>
+      <p className="text-4xl font-semibold mt-2">{money(balance)}</p>
+      <p className="text-sm text-primary mt-2">Resultado acumulado: {money(total)}</p>
+      <button
+        onClick={onClick}
+        className="mt-6 rounded-lg bg-primary text-primary-foreground px-4 py-3 text-sm"
+      >
+        Configurar saldo e metas
+      </button>
+    </div>
+  )
+}
+
+function SettingsView({
+  onPairs,
+  onProfile,
+  onBalance,
+}: {
+  onPairs: () => void
+  onProfile: () => void
+  onBalance: () => void
+}) {
+  const items: [string, () => void][] = [
+    ['Saldo e metas', onBalance],
+    ['Pares de moedas', onPairs],
+    ['Perfil', onProfile],
+  ]
+  return (
+    <div className="grid md:grid-cols-3 gap-4">
+      {items.map(([label, fn]) => (
+        <button
+          key={label}
+          onClick={fn}
+          className="rounded-xl border border-border bg-card p-6 text-left hover:border-primary"
+        >
+          <Settings className="size-5 text-primary mb-4" />
+          <b>{label}</b>
+          <p className="text-xs text-muted-foreground mt-2">Gerenciar configurações</p>
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/* ----------------------------- Modals ----------------------------- */
+
+function ModalShell({
+  title,
+  onClose,
+  error,
+  children,
+  footer,
+}: {
+  title: string
+  onClose: () => void
+  error?: string
+  children: React.ReactNode
+  footer?: React.ReactNode
+}) {
+  return (
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm grid place-items-center p-4">
+      <div className="w-full max-w-lg rounded-2xl border border-border bg-card p-5 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center">
+          <h2 className="font-semibold">{title}</h2>
+          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
+            <X className="size-4" />
+          </button>
+        </div>
+        {error && <p className="text-sm text-destructive mt-3">{error}</p>}
+        <div className="grid gap-4 mt-5">{children}</div>
+        {footer && <div className="mt-5">{footer}</div>}
+      </div>
+    </div>
+  )
+}
+
+const inputClass =
+  'h-11 rounded-lg border border-input bg-background px-3 text-sm text-foreground w-full mt-2'
+
+function TradeModal({
+  form,
+  setForm,
+  pairs,
+  busy,
+  error,
+  blocked,
+  close,
+  submit,
+  editing,
+}: {
+  form: TradeForm
+  setForm: (f: TradeForm) => void
+  pairs: string[]
+  busy: boolean
+  error: string
+  blocked: string | null
+  close: () => void
+  submit: () => void
+  editing: Trade | null
+}) {
+  return (
+    <ModalShell
+      title={editing ? 'Editar operação' : 'Registrar operação'}
+      onClose={close}
+      error={error}
+      footer={
+        <div className="flex gap-2">
+          <button
+            disabled={busy}
+            onClick={close}
+            className="h-11 rounded-lg border border-border px-4 text-sm"
+          >
+            Cancelar
+          </button>
+          <button
+            disabled={busy}
+            onClick={submit}
+            className="h-11 rounded-lg bg-primary text-primary-foreground px-4 text-sm font-semibold inline-flex items-center gap-1"
+          >
+            <Save className="size-4" /> {busy ? 'Salvando...' : 'Salvar operação'}
+          </button>
+        </div>
+      }
+    >
+      {blocked && (
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 text-amber-400 px-3 py-2 text-sm">
+          {blocked}
+        </div>
+      )}
+      <label className="text-xs">
+        Par
+        <select
+          className={inputClass}
+          value={form.pair}
+          onChange={(e) => setForm({ ...form, pair: e.target.value })}
+        >
+          {pairs.map((x) => (
+            <option key={x}>{x}</option>
+          ))}
+        </select>
+      </label>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="text-xs">
+          Direção
+          <select
+            className={inputClass}
+            value={form.direction}
+            onChange={(e) => setForm({ ...form, direction: e.target.value })}
+          >
+            <option>CALL</option>
+            <option>PUT</option>
+          </select>
+        </label>
+        <label className="text-xs">
+          Valor da entrada
+          <input
+            type="number"
+            min="0.01"
+            step="0.01"
+            className={inputClass}
+            value={form.amount}
+            onChange={(e) => setForm({ ...form, amount: e.target.value })}
+          />
+        </label>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="text-xs">
+          Payout (%)
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            className={inputClass}
+            value={form.payout}
+            onChange={(e) => setForm({ ...form, payout: e.target.value })}
+          />
+        </label>
+        <label className="text-xs">
+          Resultado
+          <select
+            className={inputClass}
+            value={form.result}
+            onChange={(e) => setForm({ ...form, result: e.target.value })}
+          >
+            <option value="win">Vitória</option>
+            <option value="loss">Derrota</option>
+            <option value="break_even">Empate</option>
+          </select>
+        </label>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Resultado estimado:{' '}
+        <strong
+          className={form.result === 'loss' ? 'text-red-400' : 'text-emerald-400'}
+        >
+          {money(
+            form.result === 'win'
+              ? (Number(form.amount) * Number(form.payout)) / 100
+              : form.result === 'loss'
+              ? -Number(form.amount)
+              : 0
+          )}
+        </strong>
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        <label className="text-xs">
+          Humor
+          <select
+            className={inputClass}
+            value={form.mood}
+            onChange={(e) => setForm({ ...form, mood: e.target.value })}
+          >
+            {MOODS.map((m) => (
+              <option key={m.key} value={m.key}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="text-xs">
+          Seguiu o plano?
+          <select
+            className={inputClass}
+            value={form.followedPlan ? 'sim' : 'nao'}
+            onChange={(e) => setForm({ ...form, followedPlan: e.target.value === 'sim' })}
+          >
+            <option value="sim">Sim</option>
+            <option value="nao">Não</option>
+          </select>
+        </label>
+      </div>
+      <label className="text-xs">
+        Data e hora
+        <input
+          type="datetime-local"
+          className={inputClass}
+          value={form.tradedAt}
+          onChange={(e) => setForm({ ...form, tradedAt: e.target.value })}
+        />
+      </label>
+      <label className="text-xs">
+        Anotações
+        <textarea
+          className={`${inputClass} h-28 py-3 resize-none`}
+          placeholder="O que você observou nessa operação?"
+          value={form.notes}
+          onChange={(e) => setForm({ ...form, notes: e.target.value })}
+        />
+      </label>
+      {form.notes && (
+        <div className="rounded-lg border border-border bg-background/40 p-3 text-xs text-foreground/80">
+          <div className="flex items-center gap-1 text-muted-foreground mb-1">
+            <FileText className="size-3" /> Pré-visualização
+          </div>
+          {form.notes}
+        </div>
+      )}
+      <label className="text-xs">
+        Imagem / print
+        <input id="trade-image" type="file" accept="image/*" className="mt-2 text-sm" />
+      </label>
+    </ModalShell>
+  )
+}
+
+function SettingsModal({
+  settings,
+  setSettings,
+  busy,
+  error,
+  close,
+  save,
+}: {
+  settings: { initialBalance: string; taxRate: string; dailyGoal: string }
+  setSettings: (s: any) => void
+  busy: boolean
+  error: string
+  close: () => void
+  save: (s: { initialBalance: number; taxRate: number; dailyGoal: number }) => void
+}) {
+  return (
+    <ModalShell
+      title="Configurações"
+      onClose={close}
+      error={error}
+      footer={
+        <div className="flex gap-2">
+          <button
+            onClick={close}
+            className="h-11 rounded-lg border border-border px-4 text-sm"
+          >
+            Cancelar
+          </button>
+          <button
+            disabled={busy}
+            onClick={() =>
+              save({
+                initialBalance: Number(settings.initialBalance),
+                taxRate: Number(settings.taxRate),
+                dailyGoal: Number(settings.dailyGoal),
+              })
+            }
+            className="h-11 rounded-lg bg-primary text-primary-foreground px-4 text-sm font-semibold inline-flex items-center gap-1"
+          >
+            <Save className="size-4" /> Salvar configurações
+          </button>
+        </div>
+      }
+    >
+      <label className="text-xs">
+        Saldo inicial
+        <input
+          className={inputClass}
+          type="number"
+          value={settings.initialBalance}
+          onChange={(e) => setSettings({ ...settings, initialBalance: e.target.value })}
+        />
+      </label>
+      <label className="text-xs">
+        Taxa de imposto (%)
+        <input
+          className={inputClass}
+          type="number"
+          value={settings.taxRate}
+          onChange={(e) => setSettings({ ...settings, taxRate: e.target.value })}
+        />
+      </label>
+      <label className="text-xs">
+        Meta diária
+        <input
+          className={inputClass}
+          type="number"
+          value={settings.dailyGoal}
+          onChange={(e) => setSettings({ ...settings, dailyGoal: e.target.value })}
+        />
+      </label>
+    </ModalShell>
+  )
+}
+
+function ProfileModal({
+  name,
+  setName,
+  busy,
+  error,
+  close,
+  save,
+}: {
+  name: string
+  setName: (n: string) => void
+  busy: boolean
+  error: string
+  close: () => void
+  save: () => void
+}) {
+  return (
+    <ModalShell
+      title="Perfil"
+      onClose={close}
+      error={error}
+      footer={
+        <div className="flex gap-2">
+          <button
+            onClick={close}
+            className="h-11 rounded-lg border border-border px-4 text-sm"
+          >
+            Cancelar
+          </button>
+          <button
+            disabled={busy}
+            onClick={save}
+            className="h-11 rounded-lg bg-primary text-primary-foreground px-4 text-sm font-semibold inline-flex items-center gap-1"
+          >
+            <Save className="size-4" /> Salvar nome
+          </button>
+        </div>
+      }
+    >
+      <label className="text-xs">
+        Nome de exibição
+        <input
+          className={inputClass}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </label>
+    </ModalShell>
+  )
+}
+
+function PairsModal({
+  pairs,
+  setPairs,
+  pairInput,
+  setPairInput,
+  editingPair,
+  setEditingPair,
+  editingPairValue,
+  setEditingPairValue,
+  busy,
+  error,
+  close,
+  add,
+  saveEdit,
+  remove,
+}: {
+  pairs: string[]
+  setPairs: (updater: (prev: string[]) => string[]) => void
+  pairInput: string
+  setPairInput: (s: string) => void
+  editingPair: string | null
+  setEditingPair: (s: string | null) => void
+  editingPairValue: string
+  setEditingPairValue: (s: string) => void
+  busy: boolean
+  error: string
+  close: () => void
+  add: () => void
+  saveEdit: (oldValue: string) => void
+  remove: (symbol: string) => void
+}) {
+  return (
+    <ModalShell
+      title="Pares de moedas"
+      onClose={close}
+      error={error}
+      footer={
+        <div className="flex gap-2">
+          <button
+            onClick={close}
+            className="h-11 rounded-lg border border-border px-4 text-sm"
+          >
+            Fechar
+          </button>
+          <button
+            disabled={busy || !pairInput.trim()}
+            onClick={add}
+            className="h-11 rounded-lg bg-primary text-primary-foreground px-4 text-sm font-semibold inline-flex items-center gap-1"
+          >
+            <Plus className="size-4" /> Adicionar par
+          </button>
+        </div>
+      }
+    >
+      <div className="flex gap-2">
+        <input
+          className={inputClass + ' flex-1 mt-0'}
+          placeholder="Ex.: ETH/USD"
+          value={pairInput}
+          onChange={(e) => setPairInput(e.target.value)}
+        />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {pairs.map((x) => (
+          <div
+            key={x}
+            className="rounded-full border border-border pl-3 pr-1 py-1 text-xs flex items-center gap-1"
+          >
+            {editingPair === x ? (
+              <input
+                value={editingPairValue}
+                onChange={(e) => setEditingPairValue(e.target.value)}
+                className="bg-transparent outline-none w-24"
+              />
+            ) : (
+              <span>{x}</span>
+            )}
+            {editingPair === x ? (
+              <button
+                disabled={busy}
+                onClick={() => saveEdit(x)}
+                title="Salvar"
+                className="size-5 rounded-full grid place-items-center text-emerald-400 hover:bg-muted"
+              >
+                <Check className="size-3" />
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setEditingPair(x)
+                  setEditingPairValue(x)
+                }}
+                title="Editar par"
+                className="size-5 rounded-full grid place-items-center text-primary hover:bg-muted"
+              >
+                <Edit3 className="size-3" />
+              </button>
+            )}
+            <button
+              disabled={busy}
+              onClick={() => {
+                if (window.confirm(`Remover ${x}?`)) remove(x)
+              }}
+              title="Remover par"
+              className="size-5 rounded-full grid place-items-center text-destructive hover:bg-muted"
+            >
+              <Trash2 className="size-3" />
+            </button>
+          </div>
+        ))}
+      </div>
+      <p className="text-[10px] text-muted-foreground">
+        Os pares padrão não podem ser removidos, mas você pode editá-los.
+      </p>
+    </ModalShell>
+  )
+}
+
+function BlockModal({ reason, close }: { reason: string; close: () => void }) {
+  return (
+    <ModalShell title="Operação bloqueada" onClose={close}>
+      <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 p-4 text-sm text-amber-400">
+        {reason}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Respeite o seu plano. Volte amanhã com cabeça fria e energia renovada.
+      </p>
+      <button
+        onClick={close}
+        className="h-11 rounded-lg bg-primary text-primary-foreground px-4 text-sm"
+      >
+        Entendi
+      </button>
+    </ModalShell>
+  )
+}
+
+function ImageModal({ src, close }: { src: string; close: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/80 grid place-items-center p-4"
+      onClick={close}
+    >
+      <img
+        src={src}
+        alt="Anexo da operação"
+        className="max-h-[90vh] max-w-full rounded-lg shadow-2xl"
+      />
+    </div>
+  )
+}
