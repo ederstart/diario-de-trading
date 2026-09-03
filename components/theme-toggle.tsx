@@ -3,26 +3,37 @@
 import { useEffect, useState } from 'react'
 import { Moon, Sun } from 'lucide-react'
 
-type Theme = 'light' | 'dark'
+export type ThemeName = 'light' | 'dark'
+
+const LABELS: Record<ThemeName, string> = {
+  light: 'Verde claro',
+  dark: 'Clássico (preto)',
+}
+
+function applyTheme(theme: ThemeName) {
+  const html = document.documentElement
+  html.classList.toggle('dark', theme === 'dark')
+  localStorage.setItem('theme', theme)
+}
 
 export function ThemeToggle({ showLabel = false }: { showLabel?: boolean }) {
-  const [theme, setTheme] = useState<Theme>('light')
+  const [theme, setTheme] = useState<ThemeName>('light')
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
-    const stored = localStorage.getItem('theme') as Theme | null
+    const stored = localStorage.getItem('theme') as ThemeName | null
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    const initial: Theme = stored ?? (prefersDark ? 'dark' : 'light')
+    const initial: ThemeName =
+      stored === 'light' || stored === 'dark' ? stored : prefersDark ? 'dark' : 'light'
     setTheme(initial)
-    document.documentElement.classList.toggle('dark', initial === 'dark')
+    applyTheme(initial)
   }, [])
 
   function toggle() {
-    const next: Theme = theme === 'light' ? 'dark' : 'light'
+    const next: ThemeName = theme === 'light' ? 'dark' : 'light'
     setTheme(next)
-    document.documentElement.classList.toggle('dark', next === 'dark')
-    localStorage.setItem('theme', next)
+    applyTheme(next)
   }
 
   if (!mounted) {
@@ -32,7 +43,7 @@ export function ThemeToggle({ showLabel = false }: { showLabel?: boolean }) {
   return (
     <button
       onClick={toggle}
-      title={theme === 'light' ? 'Ativar modo escuro' : 'Ativar modo claro'}
+      title={`Tema atual: ${LABELS[theme]} — clique para alternar`}
       aria-label="Alternar tema"
       className="flex items-center gap-3 text-muted-foreground hover:text-foreground transition"
     >
@@ -41,11 +52,7 @@ export function ThemeToggle({ showLabel = false }: { showLabel?: boolean }) {
       ) : (
         <Sun className="size-[18px] shrink-0" />
       )}
-      {showLabel && (
-        <span className="text-xs">
-          {theme === 'light' ? 'Modo escuro' : 'Modo claro'}
-        </span>
-      )}
+      {showLabel && <span className="text-xs">{LABELS[theme]}</span>}
     </button>
   )
 }

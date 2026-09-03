@@ -6,6 +6,7 @@ import {
   addTradingPair,
   createTrade,
   deleteTrade,
+  getTradingData,
   removeTradingPair,
   saveSettings,
   updateProfile,
@@ -262,6 +263,8 @@ export default function TradingDashboard({ user, initialData }: Props) {
     setBusy(true)
     setError('')
     try {
+      // Sempre começa com o screenshot atual do form (pode ter sido setado
+      // pelo onEdit, ou pode ser null para um trade novo).
       let screenshotPath: string | null = form.screenshotPath ?? null
       const fileInput = document.querySelector('#trade-image') as HTMLInputElement | null
       const file = fileInput?.files?.[0]
@@ -290,7 +293,7 @@ export default function TradingDashboard({ user, initialData }: Props) {
       setModal(null)
       setEditingTrade(null)
       setSuccess('Operação salva com sucesso')
-      router.refresh()
+      await refetch()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Não foi possível salvar')
     } finally {
@@ -304,7 +307,7 @@ export default function TradingDashboard({ user, initialData }: Props) {
     try {
       await fn()
       setSuccess('Salvo com sucesso')
-      router.refresh()
+      await refetch()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Não foi possível salvar')
     } finally {
@@ -331,6 +334,32 @@ export default function TradingDashboard({ user, initialData }: Props) {
     router.refresh()
   }
 
+  // Sincroniza o estado local com o banco (sem reload da página inteira).
+  // Chamado após cada mutação (criar/editar/excluir trade, salvar config, etc.)
+  async function refetch() {
+    try {
+      const fresh = await getTradingData()
+      setTrades(fresh.trades || [])
+      if (fresh.settings) {
+        setSettings({
+          initialBalance: String(fresh.settings.initialBalance ?? 0),
+          taxRate: String(fresh.settings.taxRate ?? 15),
+          dailyGoal: String(fresh.settings.dailyGoal ?? 0),
+        })
+      }
+      if (fresh.user?.name) setName(fresh.user.name)
+      // Só sincroniza pares do banco se houver; se vazio (banco recém-zerao), mantém atual
+      if (fresh.pairs && fresh.pairs.length > 0) {
+        setPairs((prev) => {
+          const merged = new Set([...prev, ...fresh.pairs])
+          return Array.from(merged)
+        })
+      }
+    } catch (e) {
+      console.error('refetch falhou:', e)
+    }
+  }
+
   const nav = [
     [LayoutDashboard, 'Visão geral'],
     [BarChart3, 'Análises'],
@@ -355,31 +384,35 @@ export default function TradingDashboard({ user, initialData }: Props) {
       <aside
         className={`fixed md:static z-50 inset-y-0 left-0 ${sidebarOpen ? 'md:w-64' : 'md:w-[76px]'} ${mobileOpen ? 'translate-x-0 w-64' : '-translate-x-full'} md:translate-x-0 shrink-0 border-r border-border flex flex-col py-5 gap-5 bg-sidebar transition-[transform,width] duration-200`}
       >
-        <div className="flex items-center justify-between px-4">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="size-10 shrink-0 rounded-xl bg-primary grid place-items-center text-primary-foreground">
-              <TrendingUp className="size-5" />
+        <div className={`flex flex-col gap-3 px-3 ${sidebarOpen || mobileOpen ? '' : 'items-center'}`}>
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="size-10 shrink-0 rounded-xl bg-primary grid place-items-center text-primary-foreground">
+                <TrendingUp className="size-5" />
+              </div>
+              {(sidebarOpen || mobileOpen) && (
+                <span className="text-sm font-semibold truncate">Diário de Trading</span>
+              )}
             </div>
-            {(sidebarOpen || mobileOpen) && (
-              <span className="text-sm font-semibold truncate">Diário de Trading</span>
-            )}
+            <button
+              onClick={() => setMobileOpen(false)}
+              title="Fechar menu"
+              className="size-9 rounded-lg text-muted-foreground hover:bg-muted md:hidden grid place-items-center"
+            >
+              <X className="size-4" />
+            </button>
           </div>
+          {/* Botao de recolher/expandir dentro da propria sidebar.
+              Em desktop fica em linha separada quando a sidebar esta recolhida
+              (para nao sobrepor o icone). */}
           <button
-            onClick={() => {
-              setSidebarOpen(!sidebarOpen)
-              setMobileOpen(false)
-            }}
+            onClick={() => setSidebarOpen(!sidebarOpen)}
             title={sidebarOpen ? 'Recolher menu' : 'Expandir menu'}
-            className="size-9 rounded-lg text-muted-foreground hover:bg-muted hidden md:grid place-items-center"
+            className={`hidden md:grid place-items-center size-9 rounded-lg text-muted-foreground hover:bg-muted ${
+              sidebarOpen ? 'self-end' : 'self-center'
+            }`}
           >
             {sidebarOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
-          </button>
-          <button
-            onClick={() => setMobileOpen(false)}
-            title="Fechar menu"
-            className="size-9 rounded-lg text-muted-foreground hover:bg-muted md:hidden grid place-items-center"
-          >
-            <X className="size-4" />
           </button>
         </div>
         <div className={`h-px mx-auto bg-border transition-all ${sidebarOpen || mobileOpen ? 'w-11/12' : 'w-9'}`} />
@@ -611,6 +644,9 @@ export default function TradingDashboard({ user, initialData }: Props) {
             />
           )}
         </div>
+
+        {/* Rodape com aliquota estimada */}
+        <Footer taxRate={Number(settings.taxRate) || 0} total={total} wins={wins} losses={losses} />
       </main>
 
       {modal === 'trade' && (
@@ -1328,6 +1364,57 @@ function SettingsView({
         </button>
       ))}
     </div>
+  )
+}
+
+function Footer({
+  taxRate,
+  total,
+  wins,
+  losses,
+}: {
+  taxRate: number
+  total: number
+  wins: number
+  losses: number
+}) {
+  // Imposto estimado aplicado apenas sobre o lucro (resultado líquido positivo).
+  // Se o resultado for negativo, mostramos 0 (não há imposto sobre prejuízo).
+  const baseCalc = total > 0 ? total : 0
+  const taxAmount = (baseCalc * taxRate) / 100
+  const netAfterTax = total - taxAmount
+
+  return (
+    <footer className="border-t border-border bg-card/40 px-4 sm:px-5 md:px-8 py-4 mt-6">
+      <div className="max-w-[1500px] mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+        <div>
+          <p className="text-muted-foreground">Alíquota estimada</p>
+          <p className="font-semibold text-sm mt-0.5">{taxRate.toFixed(2)}%</p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Imposto sobre lucro</p>
+          <p className={`font-semibold text-sm mt-0.5 ${taxAmount > 0 ? 'text-amber-400' : 'text-muted-foreground'}`}>
+            {money(taxAmount)}
+          </p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Líquido após imposto</p>
+          <p className={`font-semibold text-sm mt-0.5 ${netAfterTax >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            {money(netAfterTax)}
+          </p>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Operações</p>
+          <p className="font-semibold text-sm mt-0.5">
+            {wins}W / {losses}L
+          </p>
+        </div>
+      </div>
+      <p className="text-[10px] text-muted-foreground mt-3 max-w-[1500px] mx-auto">
+        Estimativa baseada no lucro acumulado e na alíquota configurada. Não constitui
+        orientação fiscal — consulte um contador para apuração oficial.
+      </p>
+    </footer>
   )
 }
 
