@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { addTradingPair, createTrade, saveSettings, updateProfile } from '@/app/actions/trading'
+import { addTradingPair, createTrade, deleteTrade, saveSettings, updateProfile, updateTrade } from '@/app/actions/trading'
 import { signOut } from '@/lib/auth-client'
 import { BarChart3, CalendarDays, Check, FileText, LayoutDashboard, LogOut, Moon, Plus, Settings, Target, TrendingDown, TrendingUp, Wallet, X } from 'lucide-react'
 
