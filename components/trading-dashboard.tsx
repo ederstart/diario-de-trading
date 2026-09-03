@@ -6,7 +6,7 @@ import { addTradingPair, createTrade, saveSettings, updateProfile } from '@/app/
 import { signOut } from '@/lib/auth-client'
 import { BarChart3, CalendarDays, Check, FileText, LayoutDashboard, LogOut, Moon, Plus, Settings, Target, TrendingDown, TrendingUp, Wallet, X } from 'lucide-react'
 
-type Trade = { id:number; pair:string; direction:string; result:string; profit:number; mood:string; tradedAt:string; followedPlan:boolean; notes?:string; screenshotPath?:string }
+type Trade = { id:number; pair:string; direction:string; amount:number; payout:number; result:string; profit:number; mood:string; tradedAt:string; followedPlan:boolean; notes?:string; screenshotPath?:string }
 type Props = { user:{name:string;email:string}; initialData:{trades:Trade[]; settings:any; pairs?:string[]} }
 const defaults = ['EUR/USD','GBP/USD','USD/JPY','AUD/USD','USD/CAD','USD/CHF','EUR/GBP','EUR/JPY','GBP/JPY','NZD/USD','BTC/USD']
 const money = (v:number) => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'USD'}).format(v)
