@@ -104,6 +104,19 @@ const sameDay = (a: string, b: string) => a.slice(0, 10) === b.slice(0, 10)
 
 const pairLabel = (value: string) => value.replace('/', ' / ')
 
+function ClientOnly({
+  children,
+  fallback = null,
+}: {
+  children: React.ReactNode
+  fallback?: React.ReactNode
+}) {
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+  if (!mounted) return <>{fallback}</>
+  return <>{children}</>
+}
+
 export default function TradingDashboard({ user, initialData }: Props) {
   const router = useRouter()
   const [view, setView] = useState('Visão geral')
@@ -329,7 +342,7 @@ export default function TradingDashboard({ user, initialData }: Props) {
   ] as const
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex">
+    <div className="min-h-screen bg-background text-foreground flex" suppressHydrationWarning>
       {/* Mobile overlay */}
       {mobileOpen && (
         <div
@@ -977,11 +990,19 @@ function Calendar({
   byDay: Record<string, number>
   compact?: boolean
 }) {
-  const days = Array.from({ length: 35 }, (_, i) => {
-    const d = new Date()
-    d.setDate(d.getDate() - 34 + i)
-    return d
-  })
+  const [days, setDays] = useState<{ key: string; day: number; month: number }[]>([])
+  useEffect(() => {
+    const arr = Array.from({ length: 35 }, (_, i) => {
+      const d = new Date()
+      d.setDate(d.getDate() - 34 + i)
+      return {
+        key: d.toISOString().slice(0, 10),
+        day: d.getDate(),
+        month: d.getMonth() + 1,
+      }
+    })
+    setDays(arr)
+  }, [])
   return (
     <div className="rounded-xl border border-border bg-card p-5">
       <h3 className="font-medium">Calendário de resultados</h3>
@@ -990,11 +1011,10 @@ function Calendar({
       </p>
       <div className={`grid grid-cols-7 ${compact ? 'gap-1.5' : 'gap-2'}`}>
         {days.map((d) => {
-          const key = d.toISOString().slice(0, 10)
-          const v = byDay[key] || 0
+          const v = byDay[d.key] || 0
           return (
             <div
-              key={key}
+              key={d.key}
               className={`${
                 compact ? 'min-h-12' : 'min-h-14'
               } rounded-lg border p-2 text-[10px] ${
@@ -1006,7 +1026,7 @@ function Calendar({
               }`}
             >
               <span>
-                {d.getDate()}/{d.getMonth() + 1}
+                {d.day}/{d.month}
               </span>
               {v !== 0 && (
                 <strong className="block mt-1">
