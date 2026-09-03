@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Moon, Sun } from 'lucide-react'
 
 export type ThemeName = 'light' | 'dark'
@@ -10,31 +10,55 @@ const LABELS: Record<ThemeName, string> = {
   dark: 'Clássico (preto)',
 }
 
+function readCurrentTheme(): ThemeName {
+  if (typeof document === 'undefined') return 'light'
+  const html = document.documentElement
+  if (html.classList.contains('dark')) return 'dark'
+  if (html.classList.contains('light')) return 'light'
+  return 'light'
+}
+
 function applyTheme(theme: ThemeName) {
   const html = document.documentElement
+  html.classList.toggle('light', theme === 'light')
   html.classList.toggle('dark', theme === 'dark')
-  localStorage.setItem('theme', theme)
+  try {
+    localStorage.setItem('theme', theme)
+  } catch {}
 }
 
 export function ThemeToggle({ showLabel = false }: { showLabel?: boolean }) {
+  // Lazy initializer: le o tema atual do DOM (definido pelo script inline
+  // no <head>) para evitar dessincronizacao entre state e classe.
   const [theme, setTheme] = useState<ThemeName>('light')
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    const current = readCurrentTheme()
+    setTheme(current)
     setMounted(true)
-    const stored = localStorage.getItem('theme') as ThemeName | null
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    const initial: ThemeName =
-      stored === 'light' || stored === 'dark' ? stored : prefersDark ? 'dark' : 'light'
-    setTheme(initial)
-    applyTheme(initial)
   }, [])
 
-  function toggle() {
-    const next: ThemeName = theme === 'light' ? 'dark' : 'light'
-    setTheme(next)
-    applyTheme(next)
-  }
+  // Mantem o state em sincronia se outra aba/componente mexer no DOM.
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const current = readCurrentTheme()
+      setTheme((prev) => (prev === current ? prev : current))
+    })
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class'],
+    })
+    return () => observer.disconnect()
+  }, [])
+
+  const toggle = useCallback(() => {
+    setTheme((prev) => {
+      const next: ThemeName = prev === 'light' ? 'dark' : 'light'
+      applyTheme(next)
+      return next
+    })
+  }, [])
 
   if (!mounted) {
     return <div className="size-[18px]" aria-hidden="true" />
