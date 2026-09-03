@@ -26,7 +26,7 @@ export async function getTradingData() {
 
 export async function createTrade(input: { pair: string; direction: string; amount: number; payout: number; result: string; mood: string; followedPlan: boolean; strategy?: string; notes?: string; screenshotPath?: string; tradedAt?: string }) {
   const id = await getUserId()
-  if (!input.pair || !['CALL', 'PUT'].includes(input.direction) || !['win', 'loss', 'break_even'].includes(input.result) || input.amount <= 0 || input.payout < 0 || input.payout > 100) throw new Error('Dados da operação inválidos')
+  if (!input.pair || !['CALL', 'PUT'].includes(input.direction) || !['win', 'loss', 'break_even'].includes(input.result) || !Number.isFinite(input.amount) || input.amount <= 0 || !Number.isFinite(input.payout) || input.payout < 0 || input.payout > 100) throw new Error('Dados da operação inválidos')
   const profit = input.result === 'win' ? input.amount * input.payout / 100 : input.result === 'loss' ? -input.amount : 0
   await db.insert(trades).values({ userId: id, pair: input.pair, direction: input.direction, amount: input.amount.toFixed(2), payout: input.payout.toFixed(2), result: input.result, profit: profit.toFixed(2), mood: input.mood, followedPlan: input.followedPlan, strategy: input.strategy || null, notes: input.notes || null, screenshotPath: input.screenshotPath || null, tradedAt: input.tradedAt ? new Date(input.tradedAt) : new Date() })
   revalidatePath('/')
