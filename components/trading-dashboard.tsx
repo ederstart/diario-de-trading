@@ -344,7 +344,7 @@ export default function TradingDashboard({ user, initialData }: Props) {
             <X className="size-4" />
           </button>
         </div>
-        <div className="h-px w-9 bg-border mx-auto" />
+        <div className={`h-px mx-auto bg-border transition-all ${sidebarOpen || mobileOpen ? 'w-11/12' : 'w-9'}`} />
         <nav className="flex flex-col gap-3 w-full px-3">
           {nav.map(([Icon, label]) => (
             <button
@@ -361,28 +361,37 @@ export default function TradingDashboard({ user, initialData }: Props) {
             </button>
           ))}
         </nav>
-        <div className="mt-auto flex flex-col gap-5 items-center px-3">
-          <button title="Modo escuro" className="text-muted-foreground hover:text-foreground">
-            <Moon className="size-[18px]" />
+        <div className="mt-auto flex flex-col gap-2 px-3">
+          <button
+            title="Modo escuro"
+            className={`${sidebarOpen || mobileOpen ? 'w-full justify-start px-3' : 'md:size-10 justify-center'} h-10 rounded-xl flex items-center gap-3 text-muted-foreground hover:bg-muted hover:text-foreground`}
+          >
+            <Moon className="size-[18px] shrink-0" />
+            {(sidebarOpen || mobileOpen) && <span className="text-xs">Modo escuro</span>}
           </button>
           <button
             title="Sair"
             onClick={logout}
-            className="text-muted-foreground hover:text-destructive"
+            className={`${sidebarOpen || mobileOpen ? 'w-full justify-start px-3' : 'md:size-10 justify-center'} h-10 rounded-xl flex items-center gap-3 text-muted-foreground hover:bg-muted hover:text-destructive`}
           >
-            <LogOut className="size-[18px]" />
+            <LogOut className="size-[18px] shrink-0" />
+            {(sidebarOpen || mobileOpen) && <span className="text-xs">Sair</span>}
           </button>
           <button
             onClick={() => setModal('profile')}
-            className="size-8 rounded-full bg-primary/20 text-primary text-xs font-semibold"
+            title="Perfil"
+            className={`${sidebarOpen || mobileOpen ? 'w-full justify-start px-3' : 'md:size-10 justify-center'} h-10 rounded-xl flex items-center gap-3 text-muted-foreground hover:bg-muted`}
           >
-            {name.slice(0, 2).toUpperCase()}
+            <span className="size-8 rounded-full bg-primary/20 text-primary text-[11px] font-semibold grid place-items-center shrink-0">
+              {name.slice(0, 2).toUpperCase()}
+            </span>
+            {(sidebarOpen || mobileOpen) && <span className="text-xs">{name}</span>}
           </button>
         </div>
       </aside>
 
       {/* Main */}
-      <main className="flex-1 min-w-0 md:ml-0">
+      <main className="flex-1 min-w-0">
         <header className="min-h-[74px] border-b border-border flex items-center justify-between gap-3 px-4 sm:px-5 md:px-8">
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -391,14 +400,6 @@ export default function TradingDashboard({ user, initialData }: Props) {
               className="md:hidden size-10 shrink-0 rounded-lg border border-border grid place-items-center"
             >
               <Menu className="size-5" />
-            </button>
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              aria-label="Alternar menu"
-              className="hidden md:grid size-9 shrink-0 rounded-lg text-muted-foreground hover:bg-muted place-items-center"
-              title={sidebarOpen ? 'Recolher menu' : 'Expandir menu'}
-            >
-              {sidebarOpen ? <PanelLeftClose className="size-4" /> : <PanelLeftOpen className="size-4" />}
             </button>
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground truncate">
@@ -482,6 +483,38 @@ export default function TradingDashboard({ user, initialData }: Props) {
               byDay={byDay}
               series={last12}
               blocked={blocked}
+              setView={setView}
+              onEdit={(t: Trade) => {
+                setEditingTrade(t)
+                setForm({
+                  id: t.id,
+                  pair: t.pair,
+                  direction: t.direction,
+                  amount: String(t.amount),
+                  payout: String(t.payout),
+                  result: t.result,
+                  mood: t.mood,
+                  followedPlan: t.followedPlan,
+                  notes: t.notes || '',
+                  screenshotPath: t.screenshotPath || null,
+                  tradedAt: toDateInput(t.tradedAt),
+                })
+                if (blocked) {
+                  setModal('block')
+                  return
+                }
+                setModal('trade')
+              }}
+              onDelete={async (t: Trade) => {
+                if (!window.confirm('Excluir esta operação?')) return
+                await saveAll(async () => {
+                  await deleteTrade(t.id)
+                })
+              }}
+              onPreview={(url: string) => {
+                setPreviewImage(url)
+                setModal('image')
+              }}
             />
           )}
           {view === 'Calendário' && <Calendar byDay={byDay} />}
@@ -815,11 +848,108 @@ function Overview(p: any) {
           <MoodRing mood={p.mood} setMood={p.setMood} />
         </div>
       </div>
+
+      <div className="grid lg:grid-cols-2 gap-4 mt-4">
+        <Calendar byDay={p.byDay} compact />
+        <div className="rounded-xl border border-border bg-card p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <h3 className="font-medium">Trades recentes</h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Edite, exclua ou visualize os anexos diretamente
+              </p>
+            </div>
+            <button
+              onClick={() => p.setView?.('Operações')}
+              className="text-xs text-primary hover:underline"
+            >
+              Ver todas
+            </button>
+          </div>
+          {p.trades.length ? (
+            <div className="divide-y divide-border -mx-5">
+              {p.trades.slice(0, 6).map((t: Trade) => {
+                const url = t.screenshotPath
+                  ? `/api/trades/attachment?path=${encodeURIComponent(t.screenshotPath)}`
+                  : ''
+                return (
+                  <div key={t.id} className="px-5 py-3 flex justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {t.screenshotPath ? (
+                        <button
+                          type="button"
+                          onClick={() => p.onPreview?.(url)}
+                          className="shrink-0"
+                          title="Ver imagem"
+                        >
+                          <img
+                            src={url}
+                            alt={`Anexo da operação ${t.pair}`}
+                            className="size-10 rounded-lg object-cover border border-border"
+                          />
+                        </button>
+                      ) : (
+                        <div className="size-10 rounded-lg border border-dashed border-border grid place-items-center text-muted-foreground shrink-0">
+                          <FileText className="size-4" />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <b className="block truncate text-sm">{pairLabel(t.pair)}</b>
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          {new Date(t.tradedAt).toLocaleString('pt-BR')} · {t.mood}
+                        </p>
+                        {t.notes ? (
+                          <p className="text-xs text-foreground/70 mt-1 line-clamp-2 max-w-[420px]">
+                            {t.notes}
+                          </p>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <strong
+                        className={
+                          t.profit >= 0 ? 'text-emerald-400 text-sm' : 'text-red-400 text-sm'
+                        }
+                      >
+                        {money(Number(t.profit))}
+                      </strong>
+                      <button
+                        onClick={() => p.onEdit?.(t)}
+                        className="text-xs text-primary"
+                        title="Editar"
+                      >
+                        <Pencil className="size-3.5" />
+                      </button>
+                      <button
+                        onClick={() => p.onDelete?.(t)}
+                        className="text-xs text-destructive"
+                        title="Excluir"
+                      >
+                        <Trash2 className="size-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground py-6 text-center">
+              Nenhuma operação registrada ainda.
+            </p>
+          )}
+        </div>
+      </div>
     </>
   )
 }
 
-function Calendar({ byDay }: { byDay: Record<string, number> }) {
+function Calendar({
+  byDay,
+  compact,
+}: {
+  byDay: Record<string, number>
+  compact?: boolean
+}) {
   const days = Array.from({ length: 35 }, (_, i) => {
     const d = new Date()
     d.setDate(d.getDate() - 34 + i)
@@ -831,14 +961,16 @@ function Calendar({ byDay }: { byDay: Record<string, number> }) {
       <p className="text-xs text-muted-foreground mt-1 mb-4">
         Inclui dias anteriores e fins de semana
       </p>
-      <div className="grid grid-cols-7 gap-2">
+      <div className={`grid grid-cols-7 ${compact ? 'gap-1.5' : 'gap-2'}`}>
         {days.map((d) => {
           const key = d.toISOString().slice(0, 10)
           const v = byDay[key] || 0
           return (
             <div
               key={key}
-              className={`min-h-14 rounded-lg border p-2 text-[10px] ${
+              className={`${
+                compact ? 'min-h-12' : 'min-h-14'
+              } rounded-lg border p-2 text-[10px] ${
                 v > 0
                   ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
                   : v < 0
@@ -850,7 +982,7 @@ function Calendar({ byDay }: { byDay: Record<string, number> }) {
                 {d.getDate()}/{d.getMonth() + 1}
               </span>
               {v !== 0 && (
-                <strong className="block mt-2">
+                <strong className="block mt-1">
                   {v > 0 ? '+' : ''}
                   {money(v)}
                 </strong>
