@@ -32,6 +32,21 @@ export async function createTrade(input: { pair: string; direction: string; amou
   revalidatePath('/')
 }
 
+export async function updateTrade(input: { id: number; pair: string; direction: string; amount: number; payout: number; result: string; mood: string; followedPlan: boolean; strategy?: string; notes?: string; screenshotPath?: string | null; tradedAt?: string }) {
+  const userId = await getUserId()
+  if (!input.id || !input.pair || !['CALL', 'PUT'].includes(input.direction) || !['win', 'loss', 'break_even'].includes(input.result) || !Number.isFinite(input.amount) || input.amount <= 0 || !Number.isFinite(input.payout) || input.payout < 0 || input.payout > 100) throw new Error('Dados da operação inválidos')
+  const profit = input.result === 'win' ? input.amount * input.payout / 100 : input.result === 'loss' ? -input.amount : 0
+  await db.update(trades).set({ pair: input.pair, direction: input.direction, amount: input.amount.toFixed(2), payout: input.payout.toFixed(2), result: input.result, profit: profit.toFixed(2), mood: input.mood, followedPlan: input.followedPlan, strategy: input.strategy || null, notes: input.notes || null, screenshotPath: input.screenshotPath || null, tradedAt: input.tradedAt ? new Date(input.tradedAt) : undefined }).where(eq(trades.id, input.id)).where(eq(trades.userId, userId))
+  revalidatePath('/')
+}
+
+export async function deleteTrade(id: number) {
+  const userId = await getUserId()
+  if (!id) throw new Error('Operação inválida')
+  await db.delete(trades).where(eq(trades.id, id)).where(eq(trades.userId, userId))
+  revalidatePath('/')
+}
+
 export async function saveSettings(input: { initialBalance: number; taxRate: number; dailyGoal: number }) {
   const id = await getUserId()
   if (input.initialBalance < 0 || input.taxRate < 0 || input.dailyGoal < 0) throw new Error('Valores inválidos')
