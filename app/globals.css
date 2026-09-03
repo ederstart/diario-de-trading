@@ -45,43 +45,48 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/* === TEMA PADRAO (LIGHT) — Verde claro === */
+/* === TEMA PADRAO (LIGHT) — Verde escuro profundo === */
 :root,
 :root.light {
-  color-scheme: light;
-  /* Verde-claro quase branco, verde-escuro profundo, primary verde medio, sidebar verde suave */
-  --background: oklch(0.985 0.01 145);
-  --foreground: oklch(0.25 0.02 160);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.25 0.02 160);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.25 0.02 160);
-  --primary: oklch(0.55 0.15 150);
-  --primary-foreground: oklch(0.99 0.005 145);
-  --secondary: oklch(0.95 0.03 150);
-  --secondary-foreground: oklch(0.25 0.02 160);
-  --muted: oklch(0.95 0.02 150);
-  --muted-foreground: oklch(0.45 0.02 160);
-  --accent: oklch(0.94 0.04 150);
-  --accent-foreground: oklch(0.25 0.02 160);
-  --destructive: oklch(0.55 0.22 27);
-  --border: oklch(0.88 0.02 150);
-  --input: oklch(0.92 0.02 150);
-  --ring: oklch(0.55 0.15 150);
-  --chart-1: oklch(0.6 0.16 150);
-  --chart-2: oklch(0.72 0.13 160);
-  --chart-3: oklch(0.5 0.1 145);
-  --chart-4: oklch(0.68 0.15 170);
-  --chart-5: oklch(0.45 0.12 155);
+  color-scheme: dark;
+  /* Fundo verde-escuro profundo com identidade, texto claro de alto contraste */
+  --background: oklch(0.18 0.03 155);
+  --foreground: oklch(0.96 0.015 150);
+  --card: oklch(0.22 0.035 155);
+  --card-foreground: oklch(0.96 0.015 150);
+  --popover: oklch(0.22 0.035 155);
+  --popover-foreground: oklch(0.96 0.015 150);
+  /* Primary: verde esmeralda vivo, alto contraste sobre o fundo escuro */
+  --primary: oklch(0.72 0.2 150);
+  --primary-foreground: oklch(0.15 0.03 160);
+  /* Secondary: verde medio escuro para suportes */
+  --secondary: oklch(0.3 0.04 155);
+  --secondary-foreground: oklch(0.95 0.015 150);
+  /* Muted: verde medio para areas de fundo neutro */
+  --muted: oklch(0.26 0.035 155);
+  --muted-foreground: oklch(0.72 0.02 150);
+  /* Accent: verde vibrante para destaques */
+  --accent: oklch(0.32 0.06 150);
+  --accent-foreground: oklch(0.96 0.015 150);
+  --destructive: oklch(0.65 0.22 25);
+  --border: oklch(0.35 0.03 155);
+  --input: oklch(0.28 0.035 155);
+  --ring: oklch(0.72 0.2 150);
+  --chart-1: oklch(0.72 0.2 150);
+  --chart-2: oklch(0.8 0.18 160);
+  --chart-3: oklch(0.55 0.12 145);
+  --chart-4: oklch(0.78 0.2 175);
+  --chart-5: oklch(0.5 0.15 155);
   --radius: 0.625rem;
-  --sidebar: oklch(0.95 0.03 150);
-  --sidebar-foreground: oklch(0.25 0.02 160);
-  --sidebar-primary: oklch(0.55 0.15 150);
-  --sidebar-primary-foreground: oklch(0.99 0.005 145);
-  --sidebar-accent: oklch(0.92 0.04 150);
-  --sidebar-accent-foreground: oklch(0.25 0.02 160);
-  --sidebar-border: oklch(0.88 0.02 150);
-  --sidebar-ring: oklch(0.55 0.15 150);
+  /* Sidebar: verde um pouco mais escuro que o fundo para destacar */
+  --sidebar: oklch(0.14 0.03 155);
+  --sidebar-foreground: oklch(0.96 0.015 150);
+  --sidebar-primary: oklch(0.72 0.2 150);
+  --sidebar-primary-foreground: oklch(0.15 0.03 160);
+  --sidebar-accent: oklch(0.22 0.04 155);
+  --sidebar-accent-foreground: oklch(0.96 0.015 150);
+  --sidebar-border: oklch(0.3 0.03 155);
+  --sidebar-ring: oklch(0.72 0.2 150);
 }
 
 /* === TEMA DARK (CLASSICO) — Preto/branco original === */
