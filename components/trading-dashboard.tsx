@@ -12,6 +12,7 @@ import {
   updateTrade,
 } from '@/app/actions/trading'
 import { signOut } from '@/lib/auth-client'
+import { ThemeToggle } from '@/components/theme-toggle'
 import {
   BarChart3,
   CalendarDays,
@@ -21,7 +22,6 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
-  Moon,
   PanelLeftClose,
   PanelLeftOpen,
   Pencil,
@@ -125,7 +125,7 @@ export default function TradingDashboard({ user, initialData }: Props) {
   const [trades, setTrades] = useState<Trade[]>(initialData.trades || [])
   const [pairs, setPairs] = useState<string[]>(() => {
     const userPairs = initialData.pairs || []
-    return Array.from(new Set([...DEFAULTS, ...userPairs]))
+    return Array.from(new Set(userPairs))
   })
   const [modal, setModal] = useState<'trade' | 'settings' | 'pairs' | 'profile' | 'block' | 'image' | null>(null)
   const [busy, setBusy] = useState(false)
@@ -147,7 +147,7 @@ export default function TradingDashboard({ user, initialData }: Props) {
   const [previewImage, setPreviewImage] = useState<string | null>(null)
 
   const [form, setForm] = useState<TradeForm>({
-    pair: pairs[0] ?? DEFAULTS[0],
+    pair: '',
     direction: 'CALL',
     amount: '50',
     payout: '85',
@@ -400,13 +400,11 @@ export default function TradingDashboard({ user, initialData }: Props) {
           ))}
         </nav>
         <div className="mt-auto flex flex-col gap-2 px-3">
-          <button
-            title="Modo escuro"
+          <div
             className={`${sidebarOpen || mobileOpen ? 'w-full justify-start px-3' : 'md:size-10 justify-center'} h-10 rounded-xl flex items-center gap-3 text-muted-foreground hover:bg-muted hover:text-foreground`}
           >
-            <Moon className="size-[18px] shrink-0" />
-            {(sidebarOpen || mobileOpen) && <span className="text-xs">Modo escuro</span>}
-          </button>
+            <ThemeToggle showLabel={Boolean(sidebarOpen || mobileOpen)} />
+          </div>
           <button
             title="Sair"
             onClick={logout}
@@ -464,9 +462,13 @@ export default function TradingDashboard({ user, initialData }: Props) {
                   setModal('block')
                   return
                 }
+                if (pairs.length === 0) {
+                  setModal('pairs')
+                  return
+                }
                 setEditingTrade(null)
                 setForm({
-                  pair: pairs[0] ?? DEFAULTS[0],
+                  pair: pairs[0],
                   direction: 'CALL',
                   amount: '50',
                   payout: '85',
@@ -852,7 +854,109 @@ function MoodRing({
   )
 }
 
+function MonthlyMoodRing({
+  monthly,
+}: {
+  monthly: { key: string; label: string; color: string; value: number; count: number; pct: number }[]
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-3 mt-5">
+      {monthly.map((m) => {
+        const ringColor =
+          m.color === 'emerald'
+            ? 'stroke-emerald-500'
+            : m.color === 'sky'
+            ? 'stroke-sky-500'
+            : m.color === 'amber'
+            ? 'stroke-amber-500'
+            : 'stroke-red-500'
+        const textColor =
+          m.color === 'emerald'
+            ? 'text-emerald-400'
+            : m.color === 'sky'
+            ? 'text-sky-400'
+            : m.color === 'amber'
+            ? 'text-amber-400'
+            : 'text-red-400'
+        // O anel vai de 0 a 100% (sempre o tracejado completo no fundo),
+        // e o preenchimento colorido avança até `pct`.
+        const radius = 28
+        const circumference = 2 * Math.PI * radius
+        const filled = circumference * (m.pct / 100)
+        const empty = circumference - filled
+        return (
+          <div
+            key={m.key}
+            className="relative rounded-xl border border-border p-4 flex flex-col items-center gap-1 hover:bg-muted/30 transition"
+          >
+            <svg width="72" height="72" viewBox="0 0 72 72" className="-rotate-90">
+              <circle
+                cx="36"
+                cy="36"
+                r={radius}
+                fill="none"
+                className="stroke-muted"
+                strokeWidth="4"
+                strokeDasharray="4 4"
+              />
+              <circle
+                cx="36"
+                cy="36"
+                r={radius}
+                fill="none"
+                className={ringColor}
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeDasharray={`${filled} ${empty}`}
+              />
+            </svg>
+            <span className={`text-xs font-medium ${textColor}`}>{m.label}</span>
+            <span className={`text-[11px] font-semibold ${textColor}`}>
+              {m.pct}%
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              {m.count} {m.count === 1 ? 'operação' : 'operações'}
+            </span>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 function Overview(p: any) {
+  // Distribuição de humores do mês corrente
+  const monthlyMood = useMemo(() => {
+    const now = new Date()
+    const month = now.getMonth()
+    const year = now.getFullYear()
+    const totals: Record<string, number> = {
+      Confiante: 0,
+      Calmo: 0,
+      Neutro: 0,
+      Ansioso: 0,
+    }
+    let total = 0
+    for (const t of p.trades as Trade[]) {
+      const d = new Date(t.tradedAt)
+      if (d.getMonth() === month && d.getFullYear() === year) {
+        if (totals[t.mood] !== undefined) {
+          totals[t.mood] += 1
+          total += 1
+        }
+      }
+    }
+    return MOODS.map((m) => ({
+      ...m,
+      count: totals[m.key] || 0,
+      pct: total ? Math.round(((totals[m.key] || 0) / total) * 100) : 0,
+    }))
+  }, [p.trades])
+
+  const monthLabel = useMemo(() => {
+    return new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(new Date())
+  }, [])
+
   return (
     <>
       <Cards
@@ -881,11 +985,17 @@ function Overview(p: any) {
           </div>
         </div>
         <div className="rounded-xl border border-border bg-card p-5">
-          <h3 className="font-medium">Seu estado hoje</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="font-medium">Seu estado no mês</h3>
+            <span className="text-xs text-muted-foreground capitalize" suppressHydrationWarning>
+              {monthLabel}
+            </span>
+          </div>
           <p className="text-xs text-muted-foreground mt-1">
-            Como você está se sentindo? Quanto maior a porcentagem, melhor o seu estado.
+            Distribuição dos humores registrados nas suas operações deste mês.
+            Quanto maior a porcentagem, mais predominante foi o estado.
           </p>
-          <MoodRing mood={p.mood} setMood={p.setMood} />
+          <MonthlyMoodRing monthly={monthlyMood} />
         </div>
       </div>
 
@@ -1680,7 +1790,7 @@ function PairsModal({
         ))}
       </div>
       <p className="text-[10px] text-muted-foreground">
-        Os pares padrão não podem ser removidos, mas você pode editá-los.
+        Você pode adicionar, editar ou remover qualquer par, inclusive os sugeridos.
       </p>
     </ModalShell>
   )

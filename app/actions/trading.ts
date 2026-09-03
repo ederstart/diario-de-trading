@@ -56,7 +56,8 @@ export async function saveSettings(input: { initialBalance: number; taxRate: num
 
 export async function addTradingPair(symbol: string) {
   const id = await getUserId(); const value = symbol.trim().toUpperCase()
-  if (!/^[A-Z0-9]{2,12}\/[A-Z0-9]{2,12}$/.test(value)) throw new Error('Use o formato EUR/USD')
+  // Aceita pares com ou sem sufixo "OTC" ou similar (ex.: EUR/USD, EUR/USD OTC)
+  if (!/^[A-Z0-9]{2,12}\/[A-Z0-9]{2,12}(\s[A-Z]{1,8})?$/.test(value)) throw new Error('Use o formato EUR/USD ou EUR/USD OTC')
   await db.insert(tradingPairs).values({ userId: id, symbol: value }).onConflictDoNothing()
 }
 
