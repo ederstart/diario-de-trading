@@ -3,7 +3,7 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { trades, tradingSettings, tradingPairs, user } from '@/lib/db/schema'
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, gte, lt } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 
@@ -24,11 +24,17 @@ export async function getTradingData() {
   return { trades: rows.map((t) => ({ ...t, amount: Number(t.amount), payout: Number(t.payout), profit: Number(t.profit), tradedAt: t.tradedAt.toISOString() })), settings: settings[0] ? { ...settings[0], initialBalance: Number(settings[0].initialBalance), taxRate: Number(settings[0].taxRate), dailyGoal: Number(settings[0].dailyGoal) } : null, pairs: pairs.map((p) => p.symbol), user: profile[0] }
 }
 
-export async function createTrade(input: { pair: string; direction: string; amount: number; payout: number; result: string; mood: string; followedPlan: boolean; strategy?: string; notes?: string; screenshotPath?: string; tradedAt?: string }) {
+export async function createTrade(input: { pair: string; direction: string; amount: number; payout: number; result: string; resultAmount?: number; mood: string; followedPlan: boolean; strategy?: string; notes?: string; screenshotPath?: string; tradedAt?: string }) {
   const id = await getUserId()
-  if (!input.pair || !['CALL', 'PUT'].includes(input.direction) || !['win', 'loss', 'break_even'].includes(input.result) || input.amount <= 0 || input.payout < 0 || input.payout > 100) throw new Error('Dados da operação inválidos')
-  const profit = input.result === 'win' ? input.amount * input.payout / 100 : input.result === 'loss' ? -input.amount : 0
-  await db.insert(trades).values({ userId: id, pair: input.pair, direction: input.direction, amount: input.amount.toFixed(2), payout: input.payout.toFixed(2), result: input.result, profit: profit.toFixed(2), mood: input.mood, followedPlan: input.followedPlan, strategy: input.strategy || null, notes: input.notes || null, screenshotPath: input.screenshotPath || null, tradedAt: input.tradedAt ? new Date(input.tradedAt) : new Date() })
+  const tradedAt = input.tradedAt ? new Date(input.tradedAt) : new Date()
+  if (!input.pair?.trim() || !['CALL', 'PUT'].includes(input.direction) || !['win', 'loss', 'break_even'].includes(input.result) || !Number.isFinite(input.amount) || input.amount <= 0 || !Number.isFinite(input.payout) || input.payout < 0 || input.payout > 100 || !['Confiante','Calmo','Neutro','Ansioso','Nervoso'].includes(input.mood) || Number.isNaN(tradedAt.getTime())) throw new Error('Dados da operação inválidos')
+  if ([0,6].includes(tradedAt.getDay())) throw new Error('Operações não são permitidas aos finais de semana')
+  const dayStart = new Date(tradedAt); dayStart.setHours(0,0,0,0); const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate()+1)
+  const sameDay = await db.select({ result: trades.result }).from(trades).where(and(eq(trades.userId,id),eq(trades.result,'loss'),gte(trades.tradedAt,dayStart),lt(trades.tradedAt,dayEnd)))
+  if (sameDay.some((t)=>t.result==='loss')) throw new Error('Dia bloqueado após a primeira perda. Volte amanhã.')
+  const calculated = input.result === 'win' ? input.amount * input.payout / 100 : input.result === 'loss' ? -input.amount : 0
+  const profit = input.result === 'break_even' ? 0 : Number.isFinite(input.resultAmount) ? (input.result === 'loss' ? -Math.abs(input.resultAmount!) : Math.abs(input.resultAmount!)) : calculated
+  await db.insert(trades).values({ userId: id, pair: input.pair.trim(), direction: input.direction, amount: input.amount.toFixed(2), payout: input.payout.toFixed(2), result: input.result, profit: profit.toFixed(2), resultAmount: Math.abs(profit).toFixed(2), mood: input.mood, followedPlan: input.followedPlan, strategy: input.strategy || null, notes: input.notes || null, screenshotPath: input.screenshotPath || null, tradedAt })
   revalidatePath('/')
 }
 
@@ -41,7 +47,7 @@ export async function saveSettings(input: { initialBalance: number; taxRate: num
 
 export async function addTradingPair(symbol: string) {
   const id = await getUserId(); const value = symbol.trim().toUpperCase()
-  if (!/^[A-Z0-9]{2,12}\/[A-Z0-9]{2,12}$/.test(value)) throw new Error('Use o formato EUR/USD')
+  if (value.length < 2 || value.length > 40 || /[<>]/.test(value)) throw new Error('Informe um nome de par válido')
   await db.insert(tradingPairs).values({ userId: id, symbol: value }).onConflictDoNothing(); revalidatePath('/')
 }
 
