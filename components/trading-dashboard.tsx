@@ -134,7 +134,7 @@ export default function TradingDashboard({ user, initialData }: Props) {
   const [previewImage, setPreviewImage] = useState<string | null>(null)
 
   const [form, setForm] = useState<TradeForm>({
-    pair: pairs[0],
+    pair: pairs[0] ?? DEFAULTS[0],
     direction: 'CALL',
     amount: '50',
     payout: '85',
@@ -143,9 +143,21 @@ export default function TradingDashboard({ user, initialData }: Props) {
     followedPlan: true,
     notes: '',
     screenshotPath: null,
-    tradedAt: new Date().toISOString().slice(0, 16),
+    tradedAt: '',
   })
   const [editingTrade, setEditingTrade] = useState<Trade | null>(null)
+
+  // Inicializa tradedAt apenas no cliente (evita hydration mismatch)
+  useEffect(() => {
+    setForm((f) => (f.tradedAt ? f : { ...f, tradedAt: new Date().toISOString().slice(0, 16) }))
+  }, [])
+
+  const [todayLabel, setTodayLabel] = useState('')
+  useEffect(() => {
+    setTodayLabel(
+      new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(new Date())
+    )
+  }, [])
 
   // Block reasons
   const blocked = useMemo(() => {
@@ -287,6 +299,19 @@ export default function TradingDashboard({ user, initialData }: Props) {
     }
   }
 
+  async function saveLocal(fn: () => Promise<void>) {
+    setBusy(true)
+    setError('')
+    try {
+      await fn()
+      setSuccess('Atualizado')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Não foi possível salvar')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function logout() {
     await signOut()
     router.replace('/sign-in')
@@ -402,8 +427,8 @@ export default function TradingDashboard({ user, initialData }: Props) {
               <Menu className="size-5" />
             </button>
             <div className="min-w-0">
-              <p className="text-xs text-muted-foreground truncate">
-                {new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(new Date())}
+              <p className="text-xs text-muted-foreground truncate" suppressHydrationWarning>
+                {todayLabel || '\u00A0'}
               </p>
               <h1 className="text-xl font-semibold truncate">
                 Olá, {name}{' '}
@@ -428,7 +453,7 @@ export default function TradingDashboard({ user, initialData }: Props) {
                 }
                 setEditingTrade(null)
                 setForm({
-                  pair: pairs[0],
+                  pair: pairs[0] ?? DEFAULTS[0],
                   direction: 'CALL',
                   amount: '50',
                   payout: '85',
@@ -642,7 +667,7 @@ export default function TradingDashboard({ user, initialData }: Props) {
             setEditingPairValue('')
           }}
           add={() =>
-            saveAll(async () => {
+            saveLocal(async () => {
               const v = pairInput.trim().toUpperCase()
               if (!v) throw new Error('Informe o par')
               await addTradingPair(v)
@@ -651,11 +676,13 @@ export default function TradingDashboard({ user, initialData }: Props) {
             })
           }
           saveEdit={(oldValue) =>
-            saveAll(async () => {
+            saveLocal(async () => {
               const v = editingPairValue.trim().toUpperCase()
               if (!v) throw new Error('Informe o nome do par')
-              await addTradingPair(v) // ensure exists
-              if (oldValue !== v) await removeTradingPair(oldValue)
+              if (oldValue !== v) {
+                await addTradingPair(v)
+                await removeTradingPair(oldValue)
+              }
               setPairs((prev) =>
                 Array.from(new Set([...prev.filter((x) => x !== oldValue), v]))
               )
@@ -664,7 +691,7 @@ export default function TradingDashboard({ user, initialData }: Props) {
             })
           }
           remove={(symbol) =>
-            saveAll(async () => {
+            saveLocal(async () => {
               await removeTradingPair(symbol)
               setPairs((prev) => prev.filter((x) => x !== symbol))
             })

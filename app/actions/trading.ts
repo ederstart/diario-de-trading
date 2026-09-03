@@ -57,14 +57,13 @@ export async function saveSettings(input: { initialBalance: number; taxRate: num
 export async function addTradingPair(symbol: string) {
   const id = await getUserId(); const value = symbol.trim().toUpperCase()
   if (!/^[A-Z0-9]{2,12}\/[A-Z0-9]{2,12}$/.test(value)) throw new Error('Use o formato EUR/USD')
-  await db.insert(tradingPairs).values({ userId: id, symbol: value }).onConflictDoNothing(); revalidatePath('/')
+  await db.insert(tradingPairs).values({ userId: id, symbol: value }).onConflictDoNothing()
 }
 
 export async function removeTradingPair(symbol: string) {
   const id = await getUserId(); const value = symbol.trim().toUpperCase()
   if (!value) throw new Error('Par inválido')
   await db.delete(tradingPairs).where(and(eq(tradingPairs.userId, id), eq(tradingPairs.symbol, value)))
-  revalidatePath('/')
 }
 
 export async function updateProfile(name: string) {
