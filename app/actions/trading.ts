@@ -3,7 +3,7 @@
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
 import { trades, tradingSettings, tradingPairs, user } from '@/lib/db/schema'
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 
@@ -44,6 +44,10 @@ export async function addTradingPair(symbol: string) {
   if (!/^[A-Z0-9]{2,12}\/[A-Z0-9]{2,12}$/.test(value)) throw new Error('Use o formato EUR/USD')
   await db.insert(tradingPairs).values({ userId: id, symbol: value }).onConflictDoNothing(); revalidatePath('/')
 }
+
+export async function renameTradingPair(previous: string, next: string) { const id=await getUserId(); const value=next.trim().toUpperCase(); if(!/^[A-Z0-9]{2,12}\/[A-Z0-9]{2,12}$/.test(value)) throw new Error('Use o formato EUR/USD'); await db.update(tradingPairs).set({symbol:value}).where(and(eq(tradingPairs.userId,id),eq(tradingPairs.symbol,previous.trim().toUpperCase()))); revalidatePath('/') }
+
+export async function removeTradingPair(symbol: string) { const id=await getUserId(); await db.delete(tradingPairs).where(and(eq(tradingPairs.userId,id),eq(tradingPairs.symbol,symbol.trim().toUpperCase()))); revalidatePath('/') }
 
 export async function updateProfile(name: string) {
   const id = await getUserId(); const value = name.trim()
