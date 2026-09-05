@@ -2,8 +2,8 @@
 
 import { auth } from '@/lib/auth'
 import { db } from '@/lib/db'
-import { trades, tradingSettings, tradingPairs, user } from '@/lib/db/schema'
-import { and, desc, eq, gte, lt } from 'drizzle-orm'
+import { trades, tradingSettings, tradingPairs, user, profileProgress } from '@/lib/db/schema'
+import { and, desc, eq, gte, lt, sql } from 'drizzle-orm'
 import { headers } from 'next/headers'
 import { revalidatePath } from 'next/cache'
 
@@ -21,7 +21,12 @@ export async function getTradingData() {
     db.select().from(tradingPairs).where(eq(tradingPairs.userId, id)),
     db.select({ name: user.name, email: user.email }).from(user).where(eq(user.id, id)),
   ])
-  return { trades: rows.map((t) => ({ ...t, amount: Number(t.amount), payout: Number(t.payout), profit: Number(t.profit), tradedAt: t.tradedAt.toISOString() })), settings: settings[0] ? { ...settings[0], initialBalance: Number(settings[0].initialBalance), taxRate: Number(settings[0].taxRate), dailyGoal: Number(settings[0].dailyGoal) } : null, pairs: pairs.map((p) => p.symbol), user: profile[0] }
+  const xp = rows.length * 100
+  const coins = rows.filter((trade) => trade.followedPlan).length * 10
+  await db.insert(profileProgress).values({ userId: id, xp: String(xp), coins: String(coins) }).onConflictDoNothing()
+  const progressRows = await db.select().from(profileProgress).where(eq(profileProgress.userId, id))
+  const progress = progressRows[0] ?? { xp: String(xp), coins: String(coins), selectedTitle: 'Começando a jornada', selectedCosmetic: 'padrão', avatarPath: null }
+  return { trades: rows.map((t) => ({ ...t, amount: Number(t.amount), payout: Number(t.payout), profit: Number(t.profit), tradedAt: t.tradedAt.toISOString() })), settings: settings[0] ? { ...settings[0], initialBalance: Number(settings[0].initialBalance), taxRate: Number(settings[0].taxRate), dailyGoal: Number(settings[0].dailyGoal) } : null, pairs: pairs.map((p) => p.symbol), user: profile[0], progress: { ...progress, xp: Number(progress.xp), coins: Number(progress.coins) } }
 }
 
 export async function createTrade(input: { pair: string; direction: string; amount: number; payout: number; result: string; resultAmount?: number; mood: string; followedPlan: boolean; strategy?: string; notes?: string; screenshotPath?: string; tradedAt?: string }) {
@@ -35,6 +40,7 @@ export async function createTrade(input: { pair: string; direction: string; amou
   const calculated = input.result === 'win' ? input.amount * input.payout / 100 : input.result === 'loss' ? -input.amount : 0
   const profit = input.result === 'break_even' ? 0 : Number.isFinite(input.resultAmount) ? (input.result === 'loss' ? -Math.abs(input.resultAmount!) : Math.abs(input.resultAmount!)) : calculated
   await db.insert(trades).values({ userId: id, pair: input.pair.trim(), direction: input.direction, amount: input.amount.toFixed(2), payout: input.payout.toFixed(2), result: input.result, profit: profit.toFixed(2), resultAmount: Math.abs(profit).toFixed(2), mood: input.mood, followedPlan: input.followedPlan, strategy: input.strategy || null, notes: input.notes || null, screenshotPath: input.screenshotPath || null, tradedAt })
+  await db.insert(profileProgress).values({ userId: id, xp: '100', coins: input.followedPlan ? '10' : '0' }).onConflictDoUpdate({ target: profileProgress.userId, set: { xp: sql`${profileProgress.xp} + 100`, coins: sql`${profileProgress.coins} + ${input.followedPlan ? 10 : 0}`, updatedAt: new Date() } })
   revalidatePath('/')
 }
 
@@ -54,6 +60,8 @@ export async function addTradingPair(symbol: string) {
 export async function renameTradingPair(previous: string, next: string) { const id=await getUserId(); const value=next.trim().toUpperCase(); if(!/^[A-Z0-9]{2,12}\/[A-Z0-9]{2,12}$/.test(value)) throw new Error('Use o formato EUR/USD'); await db.update(tradingPairs).set({symbol:value}).where(and(eq(tradingPairs.userId,id),eq(tradingPairs.symbol,previous.trim().toUpperCase()))); revalidatePath('/') }
 
 export async function removeTradingPair(symbol: string) { const id=await getUserId(); await db.delete(tradingPairs).where(and(eq(tradingPairs.userId,id),eq(tradingPairs.symbol,symbol.trim().toUpperCase()))); revalidatePath('/') }
+
+export async function updateProgress(input: { title?: string; cosmetic?: string; avatarPath?: string }) { const id = await getUserId(); await db.insert(profileProgress).values({ userId: id, xp: '0', coins: '0', selectedTitle: input.title || 'Começando a jornada', selectedCosmetic: input.cosmetic || 'padrão', avatarPath: input.avatarPath || null }).onConflictDoUpdate({ target: profileProgress.userId, set: { ...(input.title ? { selectedTitle: input.title } : {}), ...(input.cosmetic ? { selectedCosmetic: input.cosmetic } : {}), ...(input.avatarPath ? { avatarPath: input.avatarPath } : {}), updatedAt: new Date() } }); revalidatePath('/') }
 
 export async function updateProfile(name: string) {
   const id = await getUserId(); const value = name.trim()
