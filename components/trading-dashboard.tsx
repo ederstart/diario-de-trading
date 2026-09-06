@@ -14,6 +14,7 @@ import {
 } from '@/app/actions/trading'
 import { signOut } from '@/lib/auth-client'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { ProfilePanel } from '@/components/profile-panel'
 import {
   BarChart3,
   CalendarDays,
@@ -33,6 +34,7 @@ import {
   Target,
   Trash2,
   TrendingUp,
+  Trophy,
   Wallet,
   X,
 } from 'lucide-react'
@@ -367,6 +369,7 @@ export default function TradingDashboard({ user, initialData }: Props) {
     [Wallet, 'Saldo'],
     [Target, 'Metas'],
     [FileText, 'Operações'],
+    [Trophy, 'Perfil gamificado'],
     [Settings, 'Configurações'],
   ] as const
 
@@ -643,6 +646,7 @@ export default function TradingDashboard({ user, initialData }: Props) {
               onBalance={() => setModal('settings')}
             />
           )}
+          {view === 'Perfil gamificado' && <ProfilePanel />}
         </div>
 
         {/* Rodape com aliquota estimada */}
