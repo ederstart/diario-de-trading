@@ -544,7 +544,6 @@ export default function TradingDashboard({ user, initialData }: Props) {
               <h2 className="text-2xl font-semibold truncate">{view}</h2>
               <p className="text-sm text-muted-foreground mt-1">Dados reais da sua conta.</p>
             </div>
-            <span className="text-xs text-muted-foreground shrink-0">{trades.length} operações</span>
           </div>
 
           {view === 'Visão geral' && (
