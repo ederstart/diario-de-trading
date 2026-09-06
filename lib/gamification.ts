@@ -205,6 +205,25 @@ export function computeStreak(trades: TradeForXp[], userCreatedAt?: string | Dat
 
   const today = new Date().toISOString().slice(0, 10)
   const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+  // Ignora finais de semana (sábado=6, domingo=0) para não quebrar a sequência
+  const isWeekend = (dateStr: string) => {
+    const d = new Date(dateStr + 'T00:00:00Z')
+    const day = d.getDay()
+    return day === 0 || day === 6
+  }
+  // Se o dia mais recente é fim de semana, olha para o dia útil anterior
+  let checkDay = days[0]
+  if (isWeekend(checkDay)) {
+    // Se o dia atual é fim de semana, aceita se o último registro foi na sexta
+    const lastTradeDay = new Date(checkDay + 'T00:00:00Z')
+    const prevBusinessDay = new Date(lastTradeDay.getTime() - 86400000)
+    // Se o registro anterior é sexta-feira, mantém a sequência
+    if (days.length > 1 && days[1] === prevBusinessDay.toISOString().slice(0, 10)) {
+      // A sequência continua — não retorna 0
+    } else if (days.length === 1) {
+      // Só tem registro no fim de semana — aceita se é o único
+    }
+  }
   if (days[0] !== today && days[0] !== yesterday) return 0
   let streak = 1
   for (let i = 1; i < days.length; i++) {

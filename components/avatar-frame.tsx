@@ -48,7 +48,7 @@ export function AvatarFrame({ avatarUrl, frameId = DEFAULT_FRAME, name = '', siz
             src={avatarUrl!}
             alt={name || 'Avatar'}
             className="h-full w-full object-cover"
-            loading="lazy"
+            loading="eager"
             onError={() => setImgFailed(true)}
           />
         ) : (
