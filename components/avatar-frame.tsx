@@ -24,6 +24,8 @@ export function AvatarFrame({ avatarUrl, frameId = DEFAULT_FRAME, name = '', siz
   const initials = name.trim().slice(0, 2).toUpperCase() || 'TR'
 
   const [imgFailed, setImgFailed] = useState(false)
+  // DEBUG: ver se a URL está chegando
+  console.log('[AvatarFrame] avatarUrl=', avatarUrl, 'imgFailed=', imgFailed, 'showImage=', Boolean(avatarUrl) && !imgFailed)
   // Reseta o erro quando a URL muda (ex.: usuário fez upload de nova foto)
   useEffect(() => {
     setImgFailed(false)

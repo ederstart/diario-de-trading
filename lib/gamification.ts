@@ -227,16 +227,15 @@ export type StreakStage = {
 }
 
 export const STREAK_STAGES: StreakStage[] = [
-  { min: 1, label: 'Iniciante', emoji: '🌱', className: 'from-emerald-500/20 to-emerald-700/10 text-emerald-300 ring-emerald-500/30', description: 'Dando o primeiro passo' },
-  { min: 3, label: 'Consistente', emoji: '🔥', className: 'from-orange-500/25 to-amber-500/10 text-orange-300 ring-orange-500/40', description: 'O fogo está aceso' },
-  { min: 7, label: 'Disciplinado', emoji: '⚡', className: 'from-amber-400/30 to-yellow-500/10 text-amber-200 ring-amber-400/50', description: 'Energia em alta' },
-  { min: 30, label: 'Imparável', emoji: '💎', className: 'from-cyan-400/30 to-blue-500/10 text-cyan-200 ring-cyan-400/60', description: 'Constância que brilha' },
-  { min: 50, label: 'Lendário', emoji: '🐉', className: 'from-fuchsia-500/30 to-purple-600/10 text-fuchsia-200 ring-fuchsia-400/60', description: 'Poder de dragão' },
-  { min: 75, label: 'Mítico', emoji: '🌌', className: 'from-rose-400/30 via-fuchsia-500/20 to-cyan-400/10 text-rose-100 ring-fuchsia-300/70', description: 'Além dos mercados' },
-  { min: 125, label: 'Imortal', emoji: '🪐', className: 'from-indigo-400/35 via-violet-500/20 to-rose-500/10 text-indigo-100 ring-indigo-300/70', description: 'Constância sobre-humana' },
-  { min: 180, label: 'Celestial', emoji: '✨', className: 'from-sky-300/35 via-indigo-400/20 to-fuchsia-500/10 text-sky-100 ring-sky-300/70', description: 'Tão raro quanto alinhamento de planetas' },
-  { min: 250, label: 'Transcendente', emoji: '🔮', className: 'from-fuchsia-300/40 via-purple-500/25 to-cyan-400/15 text-fuchsia-100 ring-fuchsia-300/80', description: 'Você transcendeu o ciclo' },
-  { min: 365, label: 'Lenda Eterna', emoji: '👑', className: 'from-amber-300/45 via-rose-400/25 to-violet-500/15 text-amber-100 ring-amber-300/90', description: 'Um ano de consistência absoluta' },
+  { min: 3, label: 'Iniciante', emoji: '🌱', className: 'from-emerald-500/20 to-emerald-700/10 text-emerald-300 ring-emerald-500/30', description: 'Dando o primeiro passo' },
+  { min: 7, label: 'Consistente', emoji: '🔥', className: 'from-orange-500/25 to-amber-500/10 text-orange-300 ring-orange-500/40', description: 'O fogo está aceso' },
+  { min: 30, label: 'Disciplinado', emoji: '⚡', className: 'from-amber-400/30 to-yellow-500/10 text-amber-200 ring-amber-400/50', description: 'Energia em alta' },
+  { min: 50, label: 'Imparável', emoji: '💎', className: 'from-cyan-400/30 to-blue-500/10 text-cyan-200 ring-cyan-400/60', description: 'Constância que brilha' },
+  { min: 75, label: 'Lendário', emoji: '🐉', className: 'from-fuchsia-500/30 to-purple-600/10 text-fuchsia-200 ring-fuchsia-400/60', description: 'Poder de dragão' },
+  { min: 125, label: 'Mítico', emoji: '🌌', className: 'from-rose-400/30 via-fuchsia-500/20 to-cyan-400/10 text-rose-100 ring-fuchsia-300/70', description: 'Além dos mercados' },
+  { min: 180, label: 'Imortal', emoji: '🪐', className: 'from-indigo-400/35 via-violet-500/20 to-rose-500/10 text-indigo-100 ring-indigo-300/70', description: 'Constância sobre-humana' },
+  { min: 250, label: 'Celestial', emoji: '✨', className: 'from-sky-300/35 via-indigo-400/20 to-fuchsia-500/10 text-sky-100 ring-sky-300/70', description: 'Tão raro quanto alinhamento de planetas' },
+  { min: 365, label: 'Transcendente', emoji: '🔮', className: 'from-fuchsia-300/40 via-purple-500/25 to-cyan-400/15 text-fuchsia-100 ring-fuchsia-300/80', description: 'Você transcendeu o ciclo' },
 ]
 
 export function streakStage(streak: number): StreakStage {
