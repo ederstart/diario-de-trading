@@ -1149,15 +1149,17 @@ function Calendar({
   byDay: Record<string, number>
   compact?: boolean
 }) {
-  const [days, setDays] = useState<{ key: string; day: number; month: number }[]>([])
+  const [days, setDays] = useState<{ key: string; day: number; month: number; isWeekend: boolean }[]>([])
   useEffect(() => {
     const arr = Array.from({ length: 35 }, (_, i) => {
       const d = new Date()
       d.setDate(d.getDate() - 34 + i)
+      const dayOfWeek = d.getDay()
       return {
         key: d.toISOString().slice(0, 10),
         day: d.getDate(),
         month: d.getMonth() + 1,
+        isWeekend: dayOfWeek === 0 || dayOfWeek === 6,
       }
     })
     setDays(arr)
@@ -1166,18 +1168,21 @@ function Calendar({
     <div className="rounded-xl border border-border bg-card p-5">
       <h3 className="font-medium">Calendário de resultados</h3>
       <p className="text-xs text-muted-foreground mt-1 mb-4">
-        Inclui dias anteriores e fins de semana
+        Finais de semana marcados como descanso
       </p>
       <div className={`grid grid-cols-7 ${compact ? 'gap-1.5' : 'gap-2'}`}>
         {days.map((d) => {
           const v = byDay[d.key] || 0
+          const isRest = d.isWeekend
           return (
             <div
               key={d.key}
               className={`${
                 compact ? 'min-h-12' : 'min-h-14'
-              } rounded-lg border p-2 text-[10px] ${
-                v > 0
+              } rounded-lg border p-2 text-[10px] flex flex-col items-center justify-center ${
+                isRest
+                  ? 'border-amber-500/30 bg-amber-500/10 text-amber-400'
+                  : v > 0
                   ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
                   : v < 0
                   ? 'border-red-500/30 bg-red-500/10 text-red-400'
@@ -1187,11 +1192,15 @@ function Calendar({
               <span>
                 {d.day}/{d.month}
               </span>
-              {v !== 0 && (
+              {isRest ? (
+                <span className="text-[9px] mt-0.5 font-medium">Descanso</span>
+              ) : v !== 0 ? (
                 <strong className="block mt-1">
                   {v > 0 ? '+' : ''}
                   {money(v)}
                 </strong>
+              ) : (
+                <span className="text-[9px] mt-0.5 opacity-50">—</span>
               )}
             </div>
           )

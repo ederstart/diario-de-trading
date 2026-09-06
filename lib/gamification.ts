@@ -194,43 +194,55 @@ export function computeProgress(trades: TradeForXp[]) {
  *  gamificação não fica zerado no dia 1).
  */
 export function computeStreak(trades: TradeForXp[], userCreatedAt?: string | Date | null): number {
-  const days = [...new Set(trades.map((t) => new Date(t.tradedAt).toISOString().slice(0, 10)))].sort().reverse()
-  if (days.length === 0) return 0
-
-  // Inclui o dia de criação da conta como ponto de partida (retroativo)
-  if (userCreatedAt) {
-    const createdDay = new Date(userCreatedAt).toISOString().slice(0, 10)
-    if (!days.includes(createdDay)) days.unshift(createdDay)
-  }
-
-  const today = new Date().toISOString().slice(0, 10)
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
-  // Ignora finais de semana (sábado=6, domingo=0) para não quebrar a sequência
   const isWeekend = (dateStr: string) => {
     const d = new Date(dateStr + 'T00:00:00Z')
     const day = d.getDay()
     return day === 0 || day === 6
   }
-  // Se o dia mais recente é fim de semana, olha para o dia útil anterior
-  let checkDay = days[0]
-  if (isWeekend(checkDay)) {
-    // Se o dia atual é fim de semana, aceita se o último registro foi na sexta
-    const lastTradeDay = new Date(checkDay + 'T00:00:00Z')
-    const prevBusinessDay = new Date(lastTradeDay.getTime() - 86400000)
-    // Se o registro anterior é sexta-feira, mantém a sequência
-    if (days.length > 1 && days[1] === prevBusinessDay.toISOString().slice(0, 10)) {
-      // A sequência continua — não retorna 0
-    } else if (days.length === 1) {
-      // Só tem registro no fim de semana — aceita se é o único
-    }
+
+  // Filtra apenas dias úteis (ignora finais de semana)
+  const businessDays = [...new Set(trades.map((t) => new Date(t.tradedAt).toISOString().slice(0, 10)))].filter(
+    (d) => !isWeekend(d)
+  )
+  const days = businessDays.sort().reverse()
+  if (days.length === 0) return 0
+
+  // Inclui o dia de criação da conta como ponto de partida (retroativo)
+  if (userCreatedAt) {
+    const createdDay = new Date(userCreatedAt).toISOString().slice(0, 10)
+    if (!isWeekend(createdDay) && !days.includes(createdDay)) days.unshift(createdDay)
   }
-  if (days[0] !== today && days[0] !== yesterday) return 0
+
+  const today = new Date().toISOString().slice(0, 10)
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
+
+  // Se o dia atual é fim de semana, aceita se o último registro útil foi na sexta
+  if (isWeekend(today)) {
+    const lastFriday = new Date(today + 'T00:00:00Z')
+    lastFriday.setDate(lastFriday.getDate() - (lastFriday.getDay() === 6 ? 1 : 2))
+    const lastFridayStr = lastFriday.toISOString().slice(0, 10)
+    if (days[0] === lastFridayStr) {
+      // sequência mantida — não retorna 0
+    } else if (days[0] !== yesterday && days[0] !== lastFridayStr) {
+      return 0
+    }
+  } else {
+    if (days[0] !== today && days[0] !== yesterday) return 0
+  }
+
   let streak = 1
   for (let i = 1; i < days.length; i++) {
     const prev = new Date(days[i - 1] + 'T00:00:00Z').getTime()
     const cur = new Date(days[i] + 'T00:00:00Z').getTime()
-    if (prev - cur === 86400000) streak++
-    else break
+    const diffDays = (prev - cur) / 86400000
+    // Se há apenas 1 dia útil de diferença (ex: sexta -> segunda = 3 dias corridos, mas 1 útil), continua
+    // Se há 2 dias úteis de diferença (ex: sexta -> terça = 4 dias corridos, 2 úteis), quebra
+    if (diffDays <= 3 && diffDays > 0) {
+      // Conta como contínuo se a diferença em dias corridos é <= 3 (ignora fim de semana)
+      streak++
+    } else {
+      break
+    }
   }
   return streak
 }
