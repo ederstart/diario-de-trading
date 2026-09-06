@@ -188,10 +188,21 @@ export function computeProgress(trades: TradeForXp[]) {
   return { xp, coinsEarned: coins, activeDays: days.size, totalTrades: trades.length }
 }
 
-/** Sequência atual de dias com registro (streak de disciplina). */
-export function computeStreak(trades: TradeForXp[]): number {
+/** Sequência atual de dias com registro (streak de disciplina).
+ *  Aceita `userCreatedAt` para retroativo: se a conta é mais antiga que o primeiro
+ *  trade, ela conta como o início da sequência (assim quem já operava antes da
+ *  gamificação não fica zerado no dia 1).
+ */
+export function computeStreak(trades: TradeForXp[], userCreatedAt?: string | Date | null): number {
   const days = [...new Set(trades.map((t) => new Date(t.tradedAt).toISOString().slice(0, 10)))].sort().reverse()
   if (days.length === 0) return 0
+
+  // Inclui o dia de criação da conta como ponto de partida (retroativo)
+  if (userCreatedAt) {
+    const createdDay = new Date(userCreatedAt).toISOString().slice(0, 10)
+    if (!days.includes(createdDay)) days.unshift(createdDay)
+  }
+
   const today = new Date().toISOString().slice(0, 10)
   const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
   if (days[0] !== today && days[0] !== yesterday) return 0
@@ -203,4 +214,34 @@ export function computeStreak(trades: TradeForXp[]): number {
     else break
   }
   return streak
+}
+
+/** Estágios da sequência — cada nível traz cor/efeito mais intenso. */
+export type StreakStage = {
+  min: number
+  label: string
+  emoji: string
+  /** classes Tailwind para gradiente + glow + animação */
+  className: string
+  description: string
+}
+
+export const STREAK_STAGES: StreakStage[] = [
+  { min: 1, label: 'Iniciante', emoji: '🌱', className: 'from-emerald-500/20 to-emerald-700/10 text-emerald-300 ring-emerald-500/30', description: 'Dando o primeiro passo' },
+  { min: 3, label: 'Consistente', emoji: '🔥', className: 'from-orange-500/25 to-amber-500/10 text-orange-300 ring-orange-500/40', description: 'O fogo está aceso' },
+  { min: 7, label: 'Disciplinado', emoji: '⚡', className: 'from-amber-400/30 to-yellow-500/10 text-amber-200 ring-amber-400/50', description: 'Energia em alta' },
+  { min: 14, label: 'Imparável', emoji: '💎', className: 'from-cyan-400/30 to-blue-500/10 text-cyan-200 ring-cyan-400/60', description: 'Constância que brilha' },
+  { min: 30, label: 'Lendário', emoji: '🐉', className: 'from-fuchsia-500/30 to-purple-600/10 text-fuchsia-200 ring-fuchsia-400/60', description: 'Poder de dragão' },
+  { min: 60, label: 'Mítico', emoji: '🌌', className: 'from-rose-400/30 via-fuchsia-500/20 to-cyan-400/10 text-rose-100 ring-fuchsia-300/70', description: 'Além dos mercados' },
+]
+
+export function streakStage(streak: number): StreakStage {
+  let current = STREAK_STAGES[0]
+  for (const s of STREAK_STAGES) if (streak >= s.min) current = s
+  return current
+}
+
+/** Próximo marco do streak (para mostrar "faltam X dias pra Lendário"). */
+export function nextStreakMilestone(streak: number): StreakStage | null {
+  return STREAK_STAGES.find((s) => s.min > streak) ?? null
 }

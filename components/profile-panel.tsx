@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react'
 import { Camera, Coins, Flame, Loader2, Lock, ShieldCheck, Sparkles, Star, Trophy } from 'lucide-react'
 import { AvatarFrame } from '@/components/avatar-frame'
-import { FRAMES, RARITY_COLOR, TITLES, xpForLevel } from '@/lib/gamification'
+import { FRAMES, RARITY_COLOR, STREAK_STAGES, TITLES, nextStreakMilestone, streakStage, xpForLevel } from '@/lib/gamification'
 import { buyFrame, equipFrame, getProfile, setAvatarUrl, type ProfileData } from '@/app/actions/gamification'
 
 export function ProfilePanel({ initialProfile }: { initialProfile?: ProfileData }) {
@@ -145,7 +145,7 @@ export function ProfilePanel({ initialProfile }: { initialProfile?: ProfileData 
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Stat icon={<Flame className="h-4 w-4" />} label="Sequência" value={`${profile.stats.streak} dia(s)`} />
+          <StreakBadge streak={profile.stats.streak} />
           <Stat icon={<ShieldCheck className="h-4 w-4" />} label="Seguiu o plano" value={`${profile.stats.planRate}%`} />
           <Stat icon={<Sparkles className="h-4 w-4" />} label="Operações" value={String(profile.stats.totalTrades)} />
           <Stat icon={<Trophy className="h-4 w-4" />} label="Acerto" value={`${profile.stats.winRate}%`} />
@@ -276,6 +276,71 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
         {icon} {label}
       </p>
       <p className="mt-1 text-lg font-bold text-foreground">{value}</p>
+    </div>
+  )
+}
+
+/** Badge animado da sequência: cor, glow e escala mudam por estágio. */
+function StreakBadge({ streak }: { streak: number }) {
+  const stage = streakStage(streak)
+  const next = nextStreakMilestone(streak)
+  const idx = STREAK_STAGES.findIndex((s) => s.min === stage.min)
+  // Quanto mais alto o estágio, mais "insano" o efeito
+  const intensity = idx + 1 // 1..6
+
+  return (
+    <div
+      className={`relative overflow-hidden rounded-xl border bg-gradient-to-br p-3 ring-1 ${stage.className} transition-all duration-500`}
+      style={{
+        boxShadow:
+          intensity >= 3
+            ? `0 0 ${12 * intensity}px -4px currentColor`
+            : undefined,
+      }}
+    >
+      {/* Brilho animado por trás — escala com o estágio */}
+      {intensity >= 2 && (
+        <span
+          className="pointer-events-none absolute -inset-1 rounded-2xl bg-gradient-to-r from-transparent via-white/10 to-transparent"
+          style={{
+            animation: `streakShine ${Math.max(1.6, 4 - intensity * 0.4)}s ease-in-out infinite`,
+          }}
+        />
+      )}
+      {/* Chamas pra estágios 3+ */}
+      {intensity >= 3 && (
+        <span
+          className="pointer-events-none absolute -bottom-1 left-1/2 h-3 w-12 -translate-x-1/2 rounded-full blur-md"
+          style={{
+            background: 'currentColor',
+            opacity: 0.4,
+            animation: 'streakFlicker 1.2s ease-in-out infinite',
+          }}
+        />
+      )}
+
+      <p className="relative flex items-center gap-1.5 text-[11px] uppercase tracking-wide opacity-80">
+        <Flame className="h-4 w-4" /> Sequência
+      </p>
+      <p className="relative mt-1 flex items-baseline gap-1.5">
+        <span
+          className="text-2xl font-extrabold leading-none transition-transform"
+          style={{
+            animation: intensity >= 2 ? 'streakPulse 1.8s ease-in-out infinite' : undefined,
+          }}
+        >
+          {streak}
+        </span>
+        <span className="text-xs font-semibold opacity-80">dia(s)</span>
+      </p>
+      <p className="relative mt-1 flex items-center gap-1 text-[11px] font-semibold opacity-90">
+        <span className="text-base leading-none">{stage.emoji}</span> {stage.label}
+      </p>
+      {next && (
+        <p className="relative mt-1 text-[10px] opacity-70">
+          Faltam {next.min - streak} para {next.emoji} {next.label}
+        </p>
+      )}
     </div>
   )
 }

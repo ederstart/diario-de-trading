@@ -136,3 +136,18 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* === Animacoes da badge de sequencia (gamificacao) === */
+@keyframes streakPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+@keyframes streakShine {
+  0% { transform: translateX(-100%) skewX(-12deg); opacity: 0; }
+  40% { opacity: 1; }
+  100% { transform: translateX(200%) skewX(-12deg); opacity: 0; }
+}
+@keyframes streakFlicker {
+  0%, 100% { transform: translateX(-50%) scaleY(1); opacity: 0.35; }
+  50% { transform: translateX(-50%) scaleY(1.4); opacity: 0.55; }
+}

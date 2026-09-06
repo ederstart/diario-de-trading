@@ -47,7 +47,7 @@ export async function getProfile() {
       })
       .from(trades)
       .where(eq(trades.userId, userId)),
-    db.select({ name: user.name, email: user.email }).from(user).where(eq(user.id, userId)),
+    db.select({ name: user.name, email: user.email, createdAt: user.createdAt }).from(user).where(eq(user.id, userId)),
   ])
 
   const owned = await db.select({ frameId: ownedFrames.frameId }).from(ownedFrames).where(eq(ownedFrames.userId, userId))
@@ -56,6 +56,7 @@ export async function getProfile() {
   const { xp, coinsEarned, activeDays, totalTrades } = computeProgress(list)
   const wins = list.filter((t) => t.result === 'win').length
   const planFollowed = list.filter((t) => t.followedPlan).length
+  const userCreatedAt = account[0]?.createdAt ? account[0].createdAt.toISOString() : null
 
   return {
     name: account[0]?.name ?? 'Trader',
@@ -70,7 +71,7 @@ export async function getProfile() {
       wins,
       winRate: totalTrades ? Math.round((wins / totalTrades) * 100) : 0,
       planRate: totalTrades ? Math.round((planFollowed / totalTrades) * 100) : 0,
-      streak: computeStreak(list),
+      streak: computeStreak(list, userCreatedAt),
     },
     ...progressForXp(xp),
   }
