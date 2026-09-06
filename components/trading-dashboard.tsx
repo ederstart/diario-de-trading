@@ -370,7 +370,7 @@ export default function TradingDashboard({ user, initialData }: Props) {
     [Wallet, 'Saldo'],
     [Target, 'Metas'],
     [FileText, 'Operações'],
-    [Trophy, 'Perfil gamificado'],
+    [Trophy, 'Conquistas'],
     [Settings, 'Configurações'],
   ] as const
 
@@ -452,10 +452,10 @@ export default function TradingDashboard({ user, initialData }: Props) {
           </button>
           <button
             onClick={() => {
-              setView('Perfil gamificado')
+              setModal('profileView')
               setMobileOpen(false)
             }}
-            title="Perfil gamificado"
+            title="Perfil"
             className={`${sidebarOpen || mobileOpen ? 'w-full justify-start px-3' : 'md:size-10 justify-center'} h-10 rounded-xl flex items-center gap-3 text-muted-foreground hover:bg-muted`}
           >
             <AvatarFrame avatarUrl={null} frameId="bronze" name={name} size={32} />
@@ -644,11 +644,11 @@ export default function TradingDashboard({ user, initialData }: Props) {
           {view === 'Configurações' && (
             <SettingsView
               onPairs={() => setModal('pairs')}
-              onProfile={() => setView('Perfil gamificado')}
+              onProfile={() => setModal('profile')}
               onBalance={() => setModal('settings')}
             />
           )}
-          {view === 'Perfil gamificado' && <ProfilePanel />}
+          {view === 'Conquistas' && <ProfilePanel />}
         </div>
 
         {/* Rodape com aliquota estimada */}
@@ -703,6 +703,14 @@ export default function TradingDashboard({ user, initialData }: Props) {
               await updateProfile(name)
             })
           }
+        />
+      )}
+      {modal === 'profileView' && (
+        <ProfileViewModal
+          close={() => {
+            setModal(null)
+            setError('')
+          }}
         />
       )}
       {modal === 'pairs' && (
@@ -1768,6 +1776,25 @@ function ProfileModal({
         />
       </label>
     </ModalShell>
+  )
+}
+
+function ProfileViewModal({ close }: { close: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm grid place-items-center p-4">
+      <div className="w-full max-w-3xl rounded-2xl border border-border bg-card p-5 max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Perfil</p>
+            <h2 className="font-semibold">Sua jornada como trader</h2>
+          </div>
+          <button onClick={close} className="text-muted-foreground hover:text-foreground" aria-label="Fechar">
+            <X className="size-4" />
+          </button>
+        </div>
+        <ProfilePanel />
+      </div>
+    </div>
   )
 }
 
