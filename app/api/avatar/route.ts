@@ -1,4 +1,4 @@
-import { put, get } from '@vercel/blob'
+import { put } from '@vercel/blob'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
@@ -6,10 +6,12 @@ import { headers } from 'next/headers'
 export const runtime = 'nodejs'
 
 /**
- * Upload da foto de perfil — usa a MESMA integração de imagens já existente (Vercel Blob).
- * O store pode estar configurado como privado, entao salvamos com access: 'private'
- * (mesmo padrao do /api/upload) e devolvemos a URL resolvida via get(pathname),
- * que é estável e funciona direto no <img>.
+ * Upload da foto de perfil.
+ *
+ * CORREÇÃO: o blob é privado, então a URL devolvida por `put()`/`get()` é
+ * assinada e EXPIRA — por isso a foto sumia depois de trocar. Agora guardamos
+ * apenas o `pathname` e servimos a imagem por uma rota própria e estável
+ * (`/api/avatar/image?path=...`), do mesmo jeito que os anexos das operações.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -29,20 +31,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Upload indisponível no momento' }, { status: 503 })
     }
 
-    const blob = await put(`avatars/${session.user.id}/${crypto.randomUUID()}-${file.name}`, file, {
+    const safeName = file.name.replace(/[^\w.\-]/g, '_')
+    const blob = await put(`avatars/${session.user.id}/${crypto.randomUUID()}-${safeName}`, file, {
       access: 'private',
       addRandomSuffix: false,
     })
 
-    // Resolve uma URL estável para o front exibir direto no <img>.
-    const resolved = await get(blob.pathname, { access: 'private' })
+    // URL estável (nunca expira) + cache-buster para o <img> recarregar na hora.
+    const url = `/api/avatar/image?path=${encodeURIComponent(blob.pathname)}&v=${Date.now()}`
 
-    return NextResponse.json({ url: resolved?.url ?? blob.url, pathname: blob.pathname })
+    return NextResponse.json({ url, pathname: blob.pathname })
   } catch (err: any) {
     console.error('[avatar upload]', err)
-    return NextResponse.json(
-      { error: err?.message || 'Falha interna no upload' },
-      { status: 500 }
-    )
+    return NextResponse.json({ error: err?.message || 'Falha interna no upload' }, { status: 500 })
   }
 }

@@ -13,10 +13,9 @@ type Props = {
 
 /**
  * Avatar com moldura estilo MOBA: a foto fica em um círculo interno e a moldura PNG
- * (fundo transparente) é sobreposta por cima, escalada um pouco maior que a foto.
+ * (fundo transparente) é sobreposta por cima.
  *
- * Se a imagem do avatar falhar (sem internet, URL expirada, 404, etc.), cai
- * automaticamente para as iniciais do nome.
+ * Se a imagem falhar, cai automaticamente para as iniciais do nome.
  */
 export function AvatarFrame({ avatarUrl, frameId = DEFAULT_FRAME, name = '', size = 112, className = '' }: Props) {
   const frame = FRAME_BY_ID[frameId] ?? FRAME_BY_ID[DEFAULT_FRAME]
@@ -24,7 +23,6 @@ export function AvatarFrame({ avatarUrl, frameId = DEFAULT_FRAME, name = '', siz
   const initials = name.trim().slice(0, 2).toUpperCase() || 'TR'
 
   const [imgFailed, setImgFailed] = useState(false)
-  // Reseta o erro quando a URL muda (ex.: usuário fez upload de nova foto)
   useEffect(() => {
     setImgFailed(false)
   }, [avatarUrl])
@@ -43,11 +41,11 @@ export function AvatarFrame({ avatarUrl, frameId = DEFAULT_FRAME, name = '', siz
       >
         {showImage ? (
           <img
+            key={avatarUrl!}
             src={avatarUrl!}
             alt={name || 'Avatar'}
             className="h-full w-full object-cover"
             loading="eager"
-            crossOrigin="anonymous"
             onError={() => setImgFailed(true)}
           />
         ) : (
@@ -63,7 +61,6 @@ export function AvatarFrame({ avatarUrl, frameId = DEFAULT_FRAME, name = '', siz
         className="pointer-events-none absolute inset-0 h-full w-full object-contain drop-shadow-md"
         loading="lazy"
         onError={(e) => {
-          // Se a moldura PNG também falhar, esconde sem quebrar o layout
           ;(e.currentTarget as HTMLImageElement).style.display = 'none'
         }}
       />

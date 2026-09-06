@@ -45,6 +45,15 @@ export const FRAMES: Frame[] = [
     description: 'Ouro e esmeraldas: a marca de quem transforma rotina em resultado.',
   },
   {
+    id: 'platina',
+    name: 'Sentinela de Platina',
+    rarity: 'raro',
+    price: 1300,
+    minLevel: 8,
+    image: '/frames/platina.png',
+    description: 'Metal frio para quem executa sem pressa e sem euforia.',
+  },
+  {
     id: 'epica',
     name: 'Cristal do Sangue-Frio',
     rarity: 'epico',
@@ -52,6 +61,24 @@ export const FRAMES: Frame[] = [
     minLevel: 10,
     image: '/frames/epica.png',
     description: 'Energia contida. Nem o loss nem o win tiram você do eixo.',
+  },
+  {
+    id: 'rubi',
+    name: 'Rubi do Risco Calculado',
+    rarity: 'epico',
+    price: 2400,
+    minLevel: 12,
+    image: '/frames/rubi.png',
+    description: 'Vermelho vivo: você respeita o stop antes de sonhar com o alvo.',
+  },
+  {
+    id: 'esmeralda',
+    name: 'Esmeralda do Juro Composto',
+    rarity: 'epico',
+    price: 2900,
+    minLevel: 13,
+    image: '/frames/esmeralda.png',
+    description: 'Pequenos ganhos, repetidos, viram patrimônio.',
   },
   {
     id: 'lendaria',
@@ -63,6 +90,15 @@ export const FRAMES: Frame[] = [
     description: 'Quem renasce depois da sequência negativa merece asas de fogo.',
   },
   {
+    id: 'obsidiana',
+    name: 'Obsidiana do Silêncio',
+    rarity: 'lendario',
+    price: 4500,
+    minLevel: 17,
+    image: '/frames/obsidiana.png',
+    description: 'Pedra vulcânica: nenhum ruído do mercado atravessa seu plano.',
+  },
+  {
     id: 'mitica',
     name: 'Dragão do Edge',
     rarity: 'mitico',
@@ -70,6 +106,24 @@ export const FRAMES: Frame[] = [
     minLevel: 20,
     image: '/frames/mitica.png',
     description: 'O topo da jornada: processo blindado, mente imbatível.',
+  },
+  {
+    id: 'celestial',
+    name: 'Coroa Celestial',
+    rarity: 'mitico',
+    price: 8000,
+    minLevel: 24,
+    image: '/frames/celestial.png',
+    description: 'Luz de outra órbita para quem virou referência de constância.',
+  },
+  {
+    id: 'cosmica',
+    name: 'Singularidade Cósmica',
+    rarity: 'mitico',
+    price: 12000,
+    minLevel: 30,
+    image: '/frames/cosmica.png',
+    description: 'O fim do mapa. Poucos chegam, ninguém esquece.',
   },
 ]
 
@@ -87,14 +141,26 @@ export const RARITY_COLOR: Record<Rarity, string> = {
 /** Títulos por nível — inspirados em jogos, mas com a linguagem do trader. */
 export const TITLES: { level: number; title: string; subtitle: string }[] = [
   { level: 1, title: 'Recruta do Gráfico', subtitle: 'Primeiros registros no diário' },
+  { level: 2, title: 'Aprendiz do Candle', subtitle: 'Começando a ler o que o preço conta' },
   { level: 3, title: 'Escudeiro do Setup', subtitle: 'Já reconhece o próprio padrão' },
+  { level: 4, title: 'Vigia do Stop', subtitle: 'Nunca mais entra sem proteção' },
   { level: 5, title: 'Sentinela do Risco', subtitle: 'Protege a banca antes de buscar lucro' },
+  { level: 6, title: 'Cartógrafo dos Níveis', subtitle: 'Suportes e resistências na ponta do lápis' },
   { level: 8, title: 'Caçador de Confluência', subtitle: 'Só entra quando o cenário confirma' },
+  { level: 9, title: 'Guardião do Diário', subtitle: 'Toda operação vira aprendizado escrito' },
   { level: 11, title: 'Templário da Disciplina', subtitle: 'O plano vale mais que a vontade' },
+  { level: 12, title: 'Domador da Ansiedade', subtitle: 'Espera o gatilho sem antecipar' },
   { level: 14, title: 'Mestre do Sangue-Frio', subtitle: 'Loss não muda o tamanho da entrada' },
+  { level: 16, title: 'Estrategista do Gerenciamento', subtitle: 'O tamanho da posição faz o resultado' },
   { level: 17, title: 'Arquiteto do Edge', subtitle: 'Constrói vantagem estatística' },
+  { level: 18, title: 'Alquimista do Drawdown', subtitle: 'Transforma perda em ajuste de processo' },
   { level: 20, title: 'Lenda da Consistência', subtitle: 'Resultado é consequência do processo' },
+  { level: 22, title: 'Guardião do Juro Composto', subtitle: 'Paciência que multiplica' },
   { level: 25, title: 'Soberano dos Mercados', subtitle: 'Mente imbatível, execução impecável' },
+  { level: 28, title: 'Oráculo do Fluxo', subtitle: 'Lê intenção onde outros veem ruído' },
+  { level: 32, title: 'Imperador do Processo', subtitle: 'Rotina blindada, emoção fora do gráfico' },
+  { level: 36, title: 'Sentinela Celestial', subtitle: 'Constância que virou referência' },
+  { level: 40, title: 'Eterno do Edge Journal', subtitle: 'A jornada virou legado' },
 ]
 
 /** XP acumulado necessário para atingir determinado nível (curva suave e sempre alcançável). */
@@ -143,9 +209,6 @@ export type TradeForXp = {
 /**
  * XP e moedas são DERIVADOS das operações já registradas — nada é gravado em duplicidade
  * e nenhuma tabela existente é alterada.
- *
- * Filosofia: o XP premia o PROCESSO (registrar, seguir o plano, anotar), não só o acerto.
- * Assim uma sequência de losses continua gerando progresso e não desestabiliza a mente.
  */
 export const XP_RULES = {
   registrar: 10,
@@ -179,7 +242,7 @@ export function computeProgress(trades: TradeForXp[]) {
       coins += COIN_RULES.seguiuPlano
     }
     if ((t.notes && t.notes.trim()) || (t.strategy && t.strategy.trim())) xp += XP_RULES.anotou
-    days.add(new Date(t.tradedAt).toISOString().slice(0, 10))
+    days.add(dayKey(t.tradedAt))
   }
 
   xp += days.size * XP_RULES.diaAtivo
@@ -188,63 +251,75 @@ export function computeProgress(trades: TradeForXp[]) {
   return { xp, coinsEarned: coins, activeDays: days.size, totalTrades: trades.length }
 }
 
-/** Sequência atual de dias com registro (streak de disciplina).
- *  Aceita `userCreatedAt` para retroativo: se a conta é mais antiga que o primeiro
- *  trade, ela conta como o início da sequência (assim quem já operava antes da
- *  gamificação não fica zerado no dia 1).
+/* -------------------------------------------------------------------------- */
+/* Datas / dias úteis                                                          */
+/* -------------------------------------------------------------------------- */
+
+/** Chave AAAA-MM-DD no fuso local (evita o "dia anterior" que o toISOString causava). */
+export function dayKey(value: string | Date): string {
+  const d = value instanceof Date ? value : new Date(value)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+/** Sábado ou domingo = dia de descanso. */
+export function isWeekendKey(key: string): boolean {
+  const [y, m, d] = key.split('-').map(Number)
+  const w = new Date(y, (m ?? 1) - 1, d ?? 1).getDay()
+  return w === 0 || w === 6
+}
+
+/** Dia útil imediatamente anterior (pula sábado e domingo). */
+export function previousBusinessDay(key: string): string {
+  const [y, m, d] = key.split('-').map(Number)
+  const date = new Date(y, (m ?? 1) - 1, d ?? 1)
+  do {
+    date.setDate(date.getDate() - 1)
+  } while (date.getDay() === 0 || date.getDay() === 6)
+  return dayKey(date)
+}
+
+/**
+ * Sequência de disciplina.
+ *
+ * Regras:
+ *  - Finais de semana são IGNORADOS: sexta → segunda mantém a sequência.
+ *  - Operações registradas no fim de semana são bônus, não quebram nem contam como elo.
+ *  - A contagem parte do último dia útil com registro, então dias antigos
+ *    (ex.: 02/09, 03/09 e 04/09) contam normalmente como 3 dias de sequência.
  */
-export function computeStreak(trades: TradeForXp[], userCreatedAt?: string | Date | null): number {
-  const isWeekend = (dateStr: string) => {
-    const d = new Date(dateStr + 'T00:00:00Z')
-    const day = d.getDay()
-    return day === 0 || day === 6
-  }
+export function computeStreak(trades: TradeForXp[], _userCreatedAt?: string | Date | null): number {
+  const allDays = [...new Set(trades.map((t) => dayKey(t.tradedAt)))]
+  if (allDays.length === 0) return 0
 
-  // Filtra apenas dias úteis (ignora finais de semana)
-  const businessDays = [...new Set(trades.map((t) => new Date(t.tradedAt).toISOString().slice(0, 10)))].filter(
-    (d) => !isWeekend(d)
-  )
-  const days = businessDays.sort().reverse()
-  if (days.length === 0) return 0
-
-  // Inclui o dia de criação da conta como ponto de partida (retroativo)
-  if (userCreatedAt) {
-    const createdDay = new Date(userCreatedAt).toISOString().slice(0, 10)
-    if (!isWeekend(createdDay) && !days.includes(createdDay)) days.unshift(createdDay)
-  }
-
-  const today = new Date().toISOString().slice(0, 10)
-  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10)
-
-  // Se o dia atual é fim de semana, aceita se o último registro útil foi na sexta
-  if (isWeekend(today)) {
-    const lastFriday = new Date(today + 'T00:00:00Z')
-    lastFriday.setDate(lastFriday.getDate() - (lastFriday.getDay() === 6 ? 1 : 2))
-    const lastFridayStr = lastFriday.toISOString().slice(0, 10)
-    if (days[0] === lastFridayStr) {
-      // sequência mantida — não retorna 0
-    } else if (days[0] !== yesterday && days[0] !== lastFridayStr) {
-      return 0
-    }
-  } else {
-    if (days[0] !== today && days[0] !== yesterday) return 0
-  }
+  const businessDays = allDays.filter((d) => !isWeekendKey(d)).sort().reverse()
+  if (businessDays.length === 0) return 1 // só registros no fim de semana
 
   let streak = 1
-  for (let i = 1; i < days.length; i++) {
-    const prev = new Date(days[i - 1] + 'T00:00:00Z').getTime()
-    const cur = new Date(days[i] + 'T00:00:00Z').getTime()
-    const diffDays = (prev - cur) / 86400000
-    // Se há apenas 1 dia útil de diferença (ex: sexta -> segunda = 3 dias corridos, mas 1 útil), continua
-    // Se há 2 dias úteis de diferença (ex: sexta -> terça = 4 dias corridos, 2 úteis), quebra
-    if (diffDays <= 3 && diffDays > 0) {
-      // Conta como contínuo se a diferença em dias corridos é <= 3 (ignora fim de semana)
+  let cursor = businessDays[0]
+  for (let i = 1; i < businessDays.length; i++) {
+    if (businessDays[i] === previousBusinessDay(cursor)) {
       streak++
+      cursor = businessDays[i]
     } else {
       break
     }
   }
   return streak
+}
+
+/** A sequência ainda está viva hoje? (falso = precisa registrar para não perder) */
+export function isStreakActive(trades: TradeForXp[]): boolean {
+  const businessDays = [...new Set(trades.map((t) => dayKey(t.tradedAt)))]
+    .filter((d) => !isWeekendKey(d))
+    .sort()
+    .reverse()
+  if (!businessDays.length) return false
+  const today = dayKey(new Date())
+  const reference = isWeekendKey(today) ? previousBusinessDay(today) : today
+  return businessDays[0] === reference || businessDays[0] === previousBusinessDay(reference)
 }
 
 /** Estágios da sequência — cada nível traz cor/efeito mais intenso. */
