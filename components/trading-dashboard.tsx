@@ -14,6 +14,7 @@ import {
 } from '@/app/actions/trading'
 import { signOut } from '@/lib/auth-client'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { AvatarFrame } from '@/components/avatar-frame'
 import { ProfilePanel } from '@/components/profile-panel'
 import {
   BarChart3,
@@ -450,13 +451,14 @@ export default function TradingDashboard({ user, initialData }: Props) {
             {(sidebarOpen || mobileOpen) && <span className="text-xs">Sair</span>}
           </button>
           <button
-            onClick={() => setModal('profile')}
-            title="Perfil"
+            onClick={() => {
+              setView('Perfil gamificado')
+              setMobileOpen(false)
+            }}
+            title="Perfil gamificado"
             className={`${sidebarOpen || mobileOpen ? 'w-full justify-start px-3' : 'md:size-10 justify-center'} h-10 rounded-xl flex items-center gap-3 text-muted-foreground hover:bg-muted`}
           >
-            <span className="size-8 rounded-full bg-primary/20 text-primary text-[11px] font-semibold grid place-items-center shrink-0">
-              {name.slice(0, 2).toUpperCase()}
-            </span>
+            <AvatarFrame avatarUrl={null} frameId="bronze" name={name} size={32} />
             {(sidebarOpen || mobileOpen) && <span className="text-xs">{name}</span>}
           </button>
         </div>
@@ -642,7 +644,7 @@ export default function TradingDashboard({ user, initialData }: Props) {
           {view === 'Configurações' && (
             <SettingsView
               onPairs={() => setModal('pairs')}
-              onProfile={() => setModal('profile')}
+              onProfile={() => setView('Perfil gamificado')}
               onBalance={() => setModal('settings')}
             />
           )}
