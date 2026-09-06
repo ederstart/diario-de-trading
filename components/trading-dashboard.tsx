@@ -12,6 +12,7 @@ import {
   updateProfile,
   updateTrade,
 } from '@/app/actions/trading'
+import { getProfile } from '@/app/actions/gamification'
 import { signOut } from '@/lib/auth-client'
 import { ThemeToggle } from '@/components/theme-toggle'
 import { AvatarFrame } from '@/components/avatar-frame'
@@ -150,6 +151,11 @@ export default function TradingDashboard({ user, initialData }: Props) {
   const [editingPair, setEditingPair] = useState<string | null>(null)
   const [editingPairValue, setEditingPairValue] = useState('')
   const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+
+  useEffect(() => {
+    getProfile().then((p) => setAvatarUrl(p?.avatarUrl ?? null)).catch(() => {})
+  }, [])
 
   const [form, setForm] = useState<TradeForm>({
     pair: '',
@@ -459,7 +465,7 @@ export default function TradingDashboard({ user, initialData }: Props) {
             title="Perfil"
             className={`${sidebarOpen || mobileOpen ? 'w-full justify-start px-3' : 'md:size-10 justify-center'} h-10 rounded-xl flex items-center gap-3 text-muted-foreground hover:bg-muted`}
           >
-            <AvatarFrame avatarUrl={null} frameId="bronze" name={name} size={32} />
+            <AvatarFrame avatarUrl={avatarUrl} frameId="bronze" name={name} size={32} />
             {(sidebarOpen || mobileOpen) && <span className="text-xs">{name}</span>}
           </button>
         </div>
