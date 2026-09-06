@@ -1,4 +1,4 @@
-import { put } from '@vercel/blob'
+import { put, get } from '@vercel/blob'
 import { NextRequest, NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { headers } from 'next/headers'
@@ -7,8 +7,9 @@ export const runtime = 'nodejs'
 
 /**
  * Upload da foto de perfil — usa a MESMA integração de imagens já existente (Vercel Blob).
- * Diferença para /api/upload: o avatar é salvo como público, para poder ser exibido
- * direto no <img> sem gerar URL assinada a cada render.
+ * O store pode estar configurado como privado, entao salvamos com access: 'private'
+ * (mesmo padrao do /api/upload) e devolvemos a URL resolvida via get(pathname),
+ * que é estável e funciona direto no <img>.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -29,11 +30,14 @@ export async function POST(request: NextRequest) {
     }
 
     const blob = await put(`avatars/${session.user.id}/${crypto.randomUUID()}-${file.name}`, file, {
-      access: 'public',
+      access: 'private',
       addRandomSuffix: false,
     })
 
-    return NextResponse.json({ url: blob.url })
+    // Resolve uma URL estável para o front exibir direto no <img>.
+    const resolved = await get(blob.pathname, { access: 'private' })
+
+    return NextResponse.json({ url: resolved?.url ?? blob.url, pathname: blob.pathname })
   } catch (err: any) {
     console.error('[avatar upload]', err)
     return NextResponse.json(

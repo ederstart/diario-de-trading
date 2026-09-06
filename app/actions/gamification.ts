@@ -78,7 +78,7 @@ export async function getProfile() {
 
 export async function setAvatarUrl(url: string) {
   const userId = await getUserId()
-  if (!/^https?:\/\/.+/.test(url)) throw new Error('Imagem inválida')
+  if (!/^https?:\/\/.+/.test(url) && !url.startsWith('avatars/')) throw new Error('Imagem inválida')
   await ensureProfile(userId)
   await db.update(traderProfile).set({ avatarUrl: url, updatedAt: new Date() }).where(eq(traderProfile.userId, userId))
   revalidatePath('/')
