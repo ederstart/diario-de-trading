@@ -32,12 +32,22 @@ export function ProfilePanel({ initialProfile }: { initialProfile?: ProfileData 
       const form = new FormData()
       form.append('file', file)
       const res = await fetch('/api/avatar', { method: 'POST', body: form })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Falha no upload')
+      const text = await res.text()
+      let data: any = {}
+      try {
+        data = text ? JSON.parse(text) : {}
+      } catch {
+        data = {}
+      }
+      if (!res.ok) {
+        throw new Error(data.error || `Falha no upload (HTTP ${res.status})`)
+      }
+      if (!data.url) throw new Error('Resposta inválida do servidor')
       await setAvatarUrl(data.url)
       await reload()
       setMessage({ type: 'ok', text: 'Foto de perfil atualizada!' })
     } catch (e: any) {
+      console.error('[avatar upload]', e)
       setMessage({ type: 'erro', text: e.message || 'Não foi possível enviar a imagem' })
     } finally {
       setUploading(false)
